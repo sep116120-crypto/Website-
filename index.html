@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจองยานพาหนะ</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <?!= include('styles') ?>
+</head>
+<body class="bg-gray-50">
+  
+  <!-- Login Page -->
+  <div id="loginPage" class="min-h-screen flex items-center justify-center px-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-4">
+          <i class="fas fa-car text-white text-3xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">ระบบจองยานพาหนะ</h1>
+        <p class="text-gray-600">ระบบจองยานพาหนะ</p>
+      </div>
+      
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อผู้ใช้</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-user text-gray-400"></i>
+            </div>
+            <input type="text" id="username" required
+              class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="กรอกชื่อผู้ใช้">
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">รหัสผ่าน</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-lock text-gray-400"></i>
+            </div>
+            <input type="password" id="password" required
+              class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="กรอกรหัสผ่าน">
+          </div>
+        </div>
+        
+        <button type="submit" 
+          class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105">
+          <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
+        </button>
+      </form>
+      
+      <div class="mt-6 text-center text-sm text-gray-500">
+        <p>ผู้ใช้ทดสอบ: admin / 1234</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainApp" class="hidden">
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-gray-800 to-gray-900 text-white shadow-xl z-50 transform transition-transform duration-300">
+      <div class="p-6 border-b border-gray-700">
+        <div class="flex items-center space-x-3 mb-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <i class="fas fa-car text-xl"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-lg">ระบบจองยานพาหนะ</h2>
+            <p class="text-xs text-gray-400">Vehicle Booking</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- User Profile -->
+      <div class="px-6 py-4 border-b border-gray-700">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm truncate" id="userDisplayName">ผู้ใช้</p>
+            <p class="text-xs text-gray-400" id="userRole">บทบาท</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Menu -->
+      <nav class="p-4 space-y-1 overflow-y-auto" style="max-height: calc(100vh - 280px);">
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2 px-3">แดชบอร์ด</div>
+        <a href="#" class="menu-item active" data-page="dashboard">
+          <i class="fas fa-home"></i>
+          <span>หน้าแรก</span>
+        </a>
+        <a href="#" class="menu-item" data-page="stats">
+          <i class="fas fa-chart-bar"></i>
+          <span>สถิติ</span>
+        </a>
+        
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2 px-3 mt-4">การจอง</div>
+        <a href="#" class="menu-item" data-page="booking">
+          <i class="fas fa-plus-circle"></i>
+          <span>จองยานพาหนะ</span>
+        </a>
+        <a href="#" class="menu-item" data-page="my-bookings">
+          <i class="fas fa-calendar-check"></i>
+          <span>การจองของฉัน</span>
+        </a>
+        
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2 px-3 mt-4" id="managementMenu">จัดการ</div>
+        <a href="#" class="menu-item admin-only" data-page="vehicles">
+          <i class="fas fa-car"></i>
+          <span>จัดการยานพาหนะ</span>
+        </a>
+        <a href="#" class="menu-item admin-only" data-page="drivers">
+          <i class="fas fa-user-tie"></i>
+          <span>พนักงานขับรถ</span>
+        </a>
+        <a href="#" class="menu-item admin-only" data-page="approvals">
+          <i class="fas fa-check-circle"></i>
+          <span>อนุมัติการจอง</span>
+          <span class="badge" id="pendingBadge">0</span>
+        </a>
+        <a href="#" class="menu-item admin-only" data-page="users">
+          <i class="fas fa-users"></i>
+          <span>จัดการผู้ใช้งาน</span>
+        </a>
+        
+        <div class="text-xs font-semibold text-gray-500 uppercase mb-2 px-3 mt-4">ระบบ</div>
+        <a href="#" class="menu-item" data-page="profile">
+          <i class="fas fa-user-circle"></i>
+          <span>โปรไฟล์</span>
+        </a>
+        <a href="#" class="menu-item admin-only" data-page="settings">
+          <i class="fas fa-cog"></i>
+          <span>ตั้งค่าระบบ</span>
+        </a>
+      </nav>
+      
+      <!-- Logout Button -->
+      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
+        <button onclick="handleLogout()" class="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>ออกจากระบบ</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Mobile Menu Toggle -->
+    <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 bg-gray-800 text-white p-3 rounded-lg shadow-lg">
+      <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Main Content -->
+    <div class="lg:ml-64 min-h-screen">
+      <!-- Header -->
+      <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="px-4 py-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900" id="pageTitle">หน้าแรก</h1>
+              <p class="text-sm text-gray-500 mt-1" id="pageSubtitle">ภาพรวมระบบจองยานพาหนะ</p>
+            </div>
+            <div class="flex items-center space-x-4">
+              <button class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full">
+                <i class="fas fa-bell text-xl"></i>
+                <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <!-- Page Content -->
+      <main class="p-4 sm:p-6 lg:p-8">
+        <div id="pageContent">
+          <!-- Content will be loaded here -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal Container -->
+  <div id="modalContainer"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 flex flex-col items-center">
+      <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
+      <p class="text-gray-700 font-medium">กำลังโหลด...</p>
+    </div>
+  </div>
+
+  <?!= include('js') ?>
+  <?!= include('js-pages') ?>
+  <?!= include('js-modals') ?>
+  <?!= include('js-api') ?>
+</body>
+</html>
