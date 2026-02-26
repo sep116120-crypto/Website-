@@ -1,0 +1,2088 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rescue Tracks</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <!-- SweetAlert2 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
+  <!-- Flaticon UIcons -->
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-bold-rounded/css/uicons-bold-rounded.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- SweetAlert2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <?!= include('styles') ?>
+</head>
+<body>
+
+  <!-- ============================
+       LOADING OVERLAY
+       ============================ -->
+  <div id="loading">
+    <div class="spinner-custom"></div>
+    <p style="margin-top:0; color:#64748b; font-size:0.82rem; font-weight:500;">กำลังโหลด...</p>
+  </div>
+
+  <!-- ============================
+       LOGIN SCREEN
+       ============================ -->
+  <div id="loginScreen" class="login-screen" style="display:none;">
+
+    <!-- Decorative background shapes -->
+    <div class="login-blob-tr"></div>
+    <div class="login-blob-bl"></div>
+    <div class="login-dot login-dot-1"></div>
+    <div class="login-dot login-dot-2"></div>
+    <div class="login-dot login-dot-3"></div>
+
+    <div class="login-card">
+      <div style="text-align:center; margin-bottom:30px;">
+        <div class="login-logo-wrap" id="loginLogoWrap">
+          <i class="fi fi-sr-shield-check" style="font-size:28px; color:white;"></i>
+        </div>
+        <h2 class="login-title" id="loginAppName">Rescue Tracks</h2>
+        <p class="login-subtitle" id="loginAppDesc">ระบบติดตามเจ้าหน้าที่กู้ชีพกู้ภัย</p>
+      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label><i class="fi fi-rr-user" style="margin-right:5px;"></i>ชื่อผู้ใช้</label>
+          <input type="text" id="user" class="form-input" placeholder="Username" required autocomplete="username" pattern="^[A-Za-z0-9]+$" title="ภาษาอังกฤษหรือตัวเลขเท่านั้น" />
+        </div>
+        <div class="form-group" style="margin-bottom:22px;">
+          <label><i class="fi fi-rr-lock" style="margin-right:5px;"></i>รหัสผ่าน</label>
+          <input type="password" id="pass" class="form-input" placeholder="Password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn-primary-custom" id="loginBtn">
+          <i class="fi fi-rr-sign-in-alt"></i>&nbsp; เข้าสู่ระบบ
+        </button>
+      </form>
+      <div class="login-links-row">
+        <button onclick="openForgotModal()">
+          <i class="fi fi-rr-key"></i> ลืมรหัสผ่าน?
+        </button>
+        <button onclick="openRegisterModal(true)">
+          <i class="fi fi-rr-user-add"></i> สมัครสมาชิก
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================
+       MAIN APP LAYOUT
+       ============================ -->
+  <div id="appScreen" style="display:none;">
+
+    <!-- Sidebar Overlay (Mobile) -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img id="sidebarLogo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 24 24'%3E%3Cpath d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/%3E%3C/svg%3E" alt="Logo">
+        <div class="sidebar-logo-text">
+          <h1 id="sidebarAppName">Rescue Tracks</h1>
+          <span>v2.0</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-menu" id="sidebarMenu">
+        <!-- เมนูจะถูกสร้างจาก JS ตาม role -->
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <img id="sidebarAvatar" src="" alt="" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22%23ccc%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/%3E%3C/svg%3E'">
+          <div class="sidebar-user-info">
+            <div class="name" id="sidebarUserName">-</div>
+            <div class="role" id="sidebarUserRole">-</div>
+          </div>
+          <button onclick="logout()" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px;" title="ออกจากระบบ">
+            <i class="fi fi-rr-sign-out-alt" style="font-size:18px;"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+      <!-- Top Header Bar -->
+      <header class="top-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="hamburger-btn" onclick="toggleSidebar()">
+            <i class="fi fi-rr-menu-burger" style="font-size:18px;"></i>
+          </button>
+          <span style="font-weight:700; color:#1e293b; font-size:0.95rem; letter-spacing:-0.01em;" id="headerPageTitle">ภาพรวม</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button onclick="reloadAllData()" class="page-btn no-print" id="btnReloadAll" title="รีเฟรชข้อมูล" style="gap:5px; padding:0 12px; font-size:0.8rem;">
+            <i class="fi fi-rr-rotate-right" id="reloadAllIcon" style="font-size:14px;"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Area -->
+      <div class="content-area">
+
+      <section id="viewHome" class="view-section active">
+  
+  <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 24px; padding: 32px; position: relative; overflow: hidden; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25); color: white;">
+    <div style="position: absolute; top: -50px; right: -20px; width: 180px; height: 180px; background: rgba(56, 189, 248, 0.2); filter: blur(50px); border-radius: 50%;"></div>
+    <div style="position: absolute; bottom: -30px; right: 150px; width: 150px; height: 150px; background: rgba(16, 185, 129, 0.15); filter: blur(40px); border-radius: 50%;"></div>
+    
+    <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+      <div style="display: flex; gap: 20px; align-items: center;">
+        <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+          <i class="fi fi-rr-chart-pie-alt" style="font-size: 28px; color: #38bdf8;"></i>
+        </div>
+        <div>
+          <h2 style="font-size: 1.7rem; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">ภาพรวมระบบปฏิบัติการ</h2>
+          <p style="margin: 0; color: #cbd5e1; font-size: 0.95rem; font-weight: 400;">
+            ผู้ดูแลระบบ: <span id="adminWelcomeName" style="color: white; font-weight: 700;">Admin</span> 
+            <span style="margin: 0 10px; color: #475569;">|</span> 
+            <i class="fi fi-rr-clock-three" style="font-size: 12px; margin-right: 5px; color:#94a3b8;"></i><span id="heroDateTime"></span>
+          </p>
+        </div>
+      </div>
+      
+      <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px 18px; border-radius: 100px; display: flex; align-items: center; gap: 10px; backdrop-filter: blur(5px);">
+        <div style="width: 8px; height: 8px; background: #34d399; border-radius: 50%; box-shadow: 0 0 12px #34d399; animation: pulse-marker 2s infinite;"></div>
+        <span style="color: #34d399; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px;">SYSTEM ONLINE</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px;" id="adminStatsCards">
+    
+    <div style="background: white; border-radius: 20px; padding: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default;" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 15px 30px rgba(59, 130, 246, 0.1)'; this.style.borderColor='#bfdbfe'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.03)'; this.style.borderColor='#f1f5f9'">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="width: 52px; height: 52px; background: #eff6ff; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+          <i class="fi fi-rr-users-alt" style="font-size: 22px;"></i>
+        </div>
+      </div>
+      <div style="margin-top: 20px;">
+        <div id="execTotal" style="font-size: 2.2rem; font-weight: 800; color: #1e293b; line-height: 1;">0</div>
+        <div style="color: #64748b; font-size: 0.95rem; margin-top: 8px; font-weight: 600;">บุคลากรทั้งหมด</div>
+      </div>
+    </div>
+
+    <div style="background: white; border-radius: 20px; padding: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default;" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 15px 30px rgba(16, 185, 129, 0.15)'; this.style.borderColor='#a7f3d0'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.03)'; this.style.borderColor='#f1f5f9'">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="width: 52px; height: 52px; background: #ecfdf5; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #10b981;">
+          <i class="fi fi-rr-shield-check" style="font-size: 22px;"></i>
+        </div>
+        <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 4px 10px rgba(16,185,129,0.2);">ON DUTY</span>
+      </div>
+      <div style="margin-top: 20px;">
+        <div id="execOnDuty" style="font-size: 2.2rem; font-weight: 800; color: #10b981; line-height: 1;">0</div>
+        <div style="color: #64748b; font-size: 0.95rem; margin-top: 8px; font-weight: 600;">กำลังปฏิบัติงาน</div>
+      </div>
+    </div>
+
+    <div style="background: white; border-radius: 20px; padding: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default;" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 15px 30px rgba(239, 68, 68, 0.15)'; this.style.borderColor='#fecaca'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.03)'; this.style.borderColor='#f1f5f9'">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="width: 52px; height: 52px; background: #fef2f2; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #ef4444;">
+          <i class="fi fi-rr-sign-out-alt" style="font-size: 22px;"></i>
+        </div>
+        <span style="background: #fee2e2; color: #ef4444; padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;">OFF DUTY</span>
+      </div>
+      <div style="margin-top: 20px;">
+        <div id="execOffDuty" style="font-size: 2.2rem; font-weight: 800; color: #ef4444; line-height: 1;">0</div>
+        <div style="color: #64748b; font-size: 0.95rem; margin-top: 8px; font-weight: 600;">พัก / ออกเวร</div>
+      </div>
+    </div>
+
+    <div style="background: white; border-radius: 20px; padding: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default;" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 15px 30px rgba(245, 158, 11, 0.15)'; this.style.borderColor='#fde68a'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.03)'; this.style.borderColor='#f1f5f9'">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="width: 52px; height: 52px; background: #fffbeb; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #f59e0b;">
+          <i class="fi fi-rr-marker" style="font-size: 22px;"></i>
+        </div>
+      </div>
+      <div style="margin-top: 20px;">
+        <div id="execStations" style="font-size: 2.2rem; font-weight: 800; color: #f59e0b; line-height: 1;">0</div>
+        <div style="color: #64748b; font-size: 0.95rem; margin-top: 8px; font-weight: 600;">จุดปฏิบัติงาน (สถานที่)</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: white; border-radius: 24px; padding: 28px; border: 1px solid #e2e8f0; box-shadow: 0 8px 20px rgba(0,0,0,0.02); margin-bottom: 28px; position: relative; overflow: hidden;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <span style="font-size:1.1rem; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:10px;">
+        <div style="background: #eff6ff; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+          <i class="fi fi-rr-chart-histogram" style="color: #3b82f6;"></i>
+        </div>
+        สัดส่วนกำลังพลปฏิบัติงาน
+      </span>
+      <span id="dutyPercent" style="font-size:1.4rem; font-weight:800; color:#3b82f6;">0%</span>
+    </div>
+    <div style="width: 100%; background: #f1f5f9; height: 16px; border-radius: 100px; overflow: hidden; position: relative;">
+      <div id="dutyProgressFill" style="height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); width: 0%; border-radius: 100px; transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);">
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: progress-shine 2s infinite;"></div>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:14px; font-size:0.9rem; color:#64748b; font-weight: 600;">
+      <span style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></div> กำลังเข้าเวร: <b id="dutyOnCount" style="color: #1e293b;">0</b> คน</span>
+      <span style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444;"></div> ออกเวร: <b id="dutyOffCount" style="color: #1e293b;">0</b> คน</span>
+    </div>
+  </div>
+
+  <style>
+    @keyframes progress-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+  </style>
+
+  <div class="personnel-header">
+    <div class="personnel-title-row">
+      <h3 class="personnel-title">
+        <div class="personnel-icon">
+          <i class="fi fi-rr-address-book" style="color: #475569; font-size:18px;"></i>
+        </div>
+        ทำเนียบบุคลากร
+        <span id="memberCountBadge" class="personnel-badge">0 คน</span>
+      </h3>
+    </div>
+    <div class="personnel-search-row">
+      <div class="personnel-search-wrap">
+        <i class="fi fi-rr-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size:16px;"></i>
+        <input type="text" id="memberSearch" placeholder="ค้นหาด้วยชื่อ, รหัส, เบอร์โทร..." class="personnel-search-input" onfocus="this.style.borderColor='#3b82f6'; this.style.background='white'; this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'; this.style.boxShadow='none'" oninput="applyMemberSearch()">
+      </div>
+    </div>
+    <div class="personnel-btn-row">
+      <button onclick="openRegisterModal(false)" class="personnel-btn personnel-btn-primary">
+        <i class="fi fi-rr-plus" style="font-size: 14px;"></i> <span>เพิ่มกำลังพล</span>
+      </button>
+      <button onclick="document.getElementById('csvFileInput').click()" class="personnel-btn personnel-btn-csv">
+        <i class="fi fi-rr-file-csv" style="font-size: 14px;"></i> <span>นำเข้า CSV</span>
+      </button>
+      <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCSVImport(event)">
+      <button onclick="downloadCSVTemplate()" class="personnel-btn personnel-btn-template" title="ดาวน์โหลดแม่แบบ CSV">
+        <i class="fi fi-rr-download" style="font-size: 13px;"></i> <span>แม่แบบ</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="memberList"></div>
+  
+</section>
+
+        <!-- ============ VIEW: USER DASHBOARD ============ -->
+        <section id="viewUserDashboard" class="view-section">
+          <div class="ud-wrap">
+
+            <!-- ── Hero Profile Card ── -->
+            <div class="ud-hero">
+              <div class="ud-hero-bg"></div>
+              <div class="ud-hero-inner">
+                <div class="ud-avatar-wrap">
+                  <img id="dashAvatar" src="" alt=""
+                    onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22%23ccc%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/%3E%3C/svg%3E'">
+                  <button class="ud-edit-btn" onclick="openMyProfileEdit()" title="แก้ไขข้อมูล">
+                    <i class="fi fi-rr-pencil"></i>
+                  </button>
+                </div>
+                <div class="ud-hero-info">
+                  <h2 class="ud-name" id="dashNick">-</h2>
+                  <p class="ud-fullname" id="dashFullName">-</p>
+                  <p class="ud-date" id="dashDate">-</p>
+                </div>
+              </div>
+
+              <!-- Mini stats row inside hero -->
+              <div class="ud-mini-stats">
+                <div class="ud-mini-stat">
+                  <span class="ud-mini-num ud-green" id="dashStatIn">—</span>
+                  <span class="ud-mini-label">เข้างาน</span>
+                </div>
+                <div class="ud-mini-divider"></div>
+                <div class="ud-mini-stat">
+                  <span class="ud-mini-num ud-red" id="dashStatHours">—</span>
+                  <span class="ud-mini-label">ออกเวร</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Action Area (Check-in / Check-out) ── -->
+            <div id="dashActionArea"></div>
+
+            <!-- ── Timeline ── -->
+            <div class="ud-timeline-card">
+              <div class="ud-section-header">
+                <i class="fi fi-rr-time-past"></i>
+                <span>ประวัติล่าสุด</span>
+              </div>
+              <div id="dashRecentList"></div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ============ VIEW: MAP ============ -->
+        <section id="viewMap" class="view-section">
+
+          <!-- Map Stats Bar -->
+          <div class="msb-wrap" id="mapStatsBar">
+
+            <!-- Stat: Check-in -->
+            <div class="msb-card msb-in">
+              <div class="msb-icon-wrap">
+                <i class="fi fi-rr-sign-in-alt"></i>
+              </div>
+              <div class="msb-body">
+                <div class="msb-label">Check-in วันนี้</div>
+                <div class="msb-num" id="mapStatIn">—</div>
+              </div>
+              <div class="msb-bar msb-bar-in"></div>
+            </div>
+
+            <!-- Stat: Check-out -->
+            <div class="msb-card msb-out">
+              <div class="msb-icon-wrap">
+                <i class="fi fi-rr-sign-out-alt"></i>
+              </div>
+              <div class="msb-body">
+                <div class="msb-label">Check-out วันนี้</div>
+                <div class="msb-num" id="mapStatOut">—</div>
+              </div>
+              <div class="msb-bar msb-bar-out"></div>
+            </div>
+
+            <!-- Stat: Active -->
+            <div class="msb-card msb-active">
+              <div class="msb-icon-wrap">
+                <div class="msb-live-dot"></div>
+                <i class="fi fi-rr-shield-check"></i>
+              </div>
+              <div class="msb-body">
+                <div class="msb-label">ปฏิบัติงานอยู่</div>
+                <div class="msb-num" id="mapStatActive">—</div>
+              </div>
+              <div class="msb-bar msb-bar-active"></div>
+            </div>
+
+            <!-- Stat: Incidents -->
+            <div class="msb-card msb-incident" onclick="switchAdminMapTab('incidents')" style="cursor:pointer;">
+              <div class="msb-icon-wrap">
+                <i class="fi fi-rr-siren-on"></i>
+              </div>
+              <div class="msb-body">
+                <div class="msb-label">เหตุการณ์ด่วน</div>
+                <div class="msb-num" id="mapStatIncidents">—</div>
+              </div>
+              <div class="msb-bar msb-bar-incident"></div>
+            </div>
+
+            <!-- Auto-refresh ring -->
+            <div class="msb-refresh">
+              <div class="msb-ring" id="mapRefreshRing">
+                <svg viewBox="0 0 40 40" class="msb-ring-svg">
+                  <circle class="msb-ring-bg" cx="20" cy="20" r="16"/>
+                  <circle class="msb-ring-arc" id="mapRefreshArc" cx="20" cy="20" r="16"/>
+                </svg>
+                <span class="msb-ring-sec" id="mapRefreshSec">30</span>
+              </div>
+              <span class="msb-refresh-label">auto-refresh</span>
+            </div>
+
+          </div>
+
+          <!-- Map Card -->
+          <div class="map-card">
+            <!-- Map Toolbar Row 1: Mode + Actions -->
+            <div class="map-toolbar">
+              <!-- Mode Group -->
+              <div class="map-mode-group">
+                <button id="btnMapSelf" onclick="toggleMapMode('self')" class="map-mode-btn active-mode">
+                  <i class="fi fi-rr-user"></i> ส่วนตัว
+                </button>
+                <button id="btnMapAll" onclick="toggleMapMode('all')" class="map-mode-btn">
+                  <i class="fi fi-rr-users"></i> ทั้งหมด
+                </button>
+              </div>
+
+              <!-- Action Group -->
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <!-- Layer -->
+                <button id="btnLayerStreet" onclick="switchLayer('street')" class="map-layer-btn active-layer" title="แผนที่">
+                  <i class="fi fi-rr-map"></i> แผนที่
+                </button>
+                <button id="btnLayerSat" onclick="switchLayer('satellite')" class="map-layer-btn" title="ดาวเทียม">
+                  <i class="fi fi-rr-satellite"></i> ดาวเทียม
+                </button>
+
+                <!-- Date Filter -->
+                <select id="mapDateSelect" onchange="applyMapDateFilter()" class="map-date-select">
+                  <option value="all">ทุกวัน</option>
+                </select>
+
+                <!-- Separator -->
+                <div style="width:1px;height:24px;background:#e2e8f0;"></div>
+
+                <!-- Fit All -->
+                <button onclick="mapFitAll()" class="map-icon-btn" title="ซูมดูทุกคน">
+                  <i class="fi fi-rr-expand"></i>
+                </button>
+                <!-- Locate Me -->
+                <button onclick="mapLocateMe()" class="map-icon-btn" id="btnLocateMe" title="หาตำแหน่งฉัน">
+                  <i class="fi fi-rr-map-marker"></i>
+                </button>
+                <!-- Fullscreen -->
+                <button onclick="mapToggleFullscreen()" class="map-icon-btn" id="btnFullscreen" title="เต็มจอ">
+                  <i class="fi fi-rr-rectangle-panoramic" id="iconFullscreen"></i>
+                </button>
+              </div>
+            </div>
+            <div id="map"></div>
+          </div>
+
+          <!-- Active List Card (Tabbed) -->
+          <div class="map-list-card">
+            <!-- Tab Header -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 0; gap:8px;">
+              <!-- Tab Buttons -->
+              <div style="display:flex; gap:4px; flex:1;">
+                <button id="adminMapTabMembers" onclick="switchAdminMapTab('members')" class="admin-map-tab active-admin-tab">
+                  <div class="map-list-icon-wrap" style="width:28px; height:28px; border-radius:8px;">
+                    <i class="fi fi-rr-users-alt" style="font-size:12px; color:white; position:relative; z-index:2;"></i>
+                  </div>
+                  <span>ปฏิบัติงาน</span>
+                  <span class="admin-tab-badge" id="mapActiveCount" style="background:#2563eb;">0</span>
+                </button>
+                <button id="adminMapTabIncidents" onclick="switchAdminMapTab('incidents')" class="admin-map-tab">
+                  <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#ef4444,#dc2626); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="fi fi-sr-siren-on" style="font-size:12px; color:white; line-height:1;"></i>
+                  </div>
+                  <span>เหตุการณ์</span>
+                  <span class="admin-tab-badge" id="mapIncidentCount" style="background:#ef4444;">0</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Panel: Members -->
+            <div id="adminMapPanelMembers">
+              <div class="map-list-header-row" style="padding-top:8px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div>
+                    <h4 class="map-list-title" id="mapListTitle">กำลังปฏิบัติงาน</h4>
+                    <p class="map-list-sub">เรียลไทม์ · อัปเดตอัตโนมัติ</p>
+                  </div>
+                </div>
+              </div>
+              <!-- Search Filter -->
+              <div class="map-list-search-wrap">
+                <i class="fi fi-rr-search map-list-search-icon"></i>
+                <input type="text" id="mapListSearch"
+                       class="map-list-search-input"
+                       placeholder="ค้นหาชื่อสมาชิก..."
+                       oninput="filterMapList()">
+                <button onclick="clearMapSearch()" class="map-list-search-clear" id="mapSearchClear" style="display:none;">
+                  <i class="fi fi-rr-cross-small"></i>
+                </button>
+              </div>
+              <!-- List -->
+              <div id="mapActiveList"></div>
+            </div>
+
+            <!-- Panel: Incidents -->
+            <div id="adminMapPanelIncidents" style="display:none;">
+              <div style="padding:12px 16px 4px; display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                  <h4 style="font-weight:700; font-size:0.9rem; color:#1e293b; margin:0;">เหตุการณ์ด่วนทั้งหมด</h4>
+                  <p style="font-size:0.72rem; color:#94a3b8; margin:2px 0 0;">เรียงตามล่าสุด · คลิกเพื่อดูตำแหน่ง</p>
+                </div>
+                <button onclick="refreshAdminIncidents()" class="map-icon-btn" title="รีเฟรช" style="width:30px; height:30px;">
+                  <i class="fi fi-rr-rotate-right" style="font-size:12px;"></i>
+                </button>
+              </div>
+              <!-- Incident filter -->
+              <div style="padding:4px 16px 8px; display:flex; gap:4px;">
+                <button onclick="filterAdminIncidents('all')" class="inc-filter-btn inc-filter-active" data-filter="all">ทั้งหมด</button>
+                <button onclick="filterAdminIncidents('new')" class="inc-filter-btn" data-filter="new"><i class="fi fi-sr-circle" style="font-size:7px; color:#ef4444; vertical-align:middle; margin-right:2px;"></i> รอดำเนินการ</button>
+                <button onclick="filterAdminIncidents('acknowledged')" class="inc-filter-btn" data-filter="acknowledged"><i class="fi fi-sr-circle" style="font-size:7px; color:#f59e0b; vertical-align:middle; margin-right:2px;"></i> รับทราบ</button>
+                <button onclick="filterAdminIncidents('resolved')" class="inc-filter-btn" data-filter="resolved"><i class="fi fi-sr-circle" style="font-size:7px; color:#22c55e; vertical-align:middle; margin-right:2px;"></i> เสร็จสิ้น</button>
+              </div>
+              <!-- Incident List -->
+              <div id="adminIncidentList" style="padding:0 16px 16px;">
+                <div style="text-align:center; padding:24px 0; color:#94a3b8;">
+                  <span style="font-size:0.82rem;">กำลังโหลด...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============ VIEW: USER STATS ============ -->
+        <section id="viewStats" class="view-section">
+          <div class="us-wrap">
+
+            <!-- ── Hero Header ── -->
+            <div class="us-hero">
+              <div class="us-hero-icon"><i class="fi fi-sr-chart-histogram"></i></div>
+              <div>
+                <h2 class="us-hero-title">สถิติของฉัน</h2>
+                <p class="us-hero-sub">สรุปการปฏิบัติงานส่วนตัว</p>
+              </div>
+            </div>
+
+            <!-- ── Summary Cards ── -->
+            <div class="us-stat-row">
+              <div class="us-stat-card us-stat-in">
+                <div class="us-stat-icon"><i class="fi fi-rr-sign-in-alt"></i></div>
+                <div class="us-stat-body">
+                  <span class="us-stat-num" id="statInTotal">—</span>
+                  <span class="us-stat-label">Check-in ทั้งหมด</span>
+                </div>
+                <div class="us-stat-bar"></div>
+              </div>
+              <div class="us-stat-card us-stat-out">
+                <div class="us-stat-icon"><i class="fi fi-rr-sign-out-alt"></i></div>
+                <div class="us-stat-body">
+                  <span class="us-stat-num" id="statOutTotal">—</span>
+                  <span class="us-stat-label">Check-out ทั้งหมด</span>
+                </div>
+                <div class="us-stat-bar"></div>
+              </div>
+            </div>
+
+            <!-- ── Chart ── -->
+            <div class="us-chart-card">
+              <div class="us-section-header">
+                <i class="fi fi-rr-chart-histogram"></i>
+                <span>กิจกรรม 7 วันล่าสุด</span>
+              </div>
+              <div class="chart-container">
+                <canvas id="statsChart"></canvas>
+              </div>
+            </div>
+
+            <!-- ── History List ── -->
+            <div class="us-history-card">
+              <div class="us-section-header">
+                <i class="fi fi-rr-list"></i>
+                <span>ประวัติการลงเวลา</span>
+              </div>
+              <div id="myStatsList"></div>
+            </div>
+
+          </div>
+        </section>
+
+
+        <!-- ============ VIEW: ADMIN STATS ============ -->
+        <section id="viewAdminStats" class="view-section">
+
+          <!-- ── 4 Summary Cards (top) ── -->
+          <div class="exec-stat-grid" style="margin-bottom:16px;" id="indvSummaryCards">
+
+            <div class="exec-stat-card exec-green">
+              <div class="exec-stat-top">
+                <div class="exec-stat-icon-wrap" style="background:rgba(255,255,255,0.2);"><i class="fi fi-rr-sign-in-alt"></i></div>
+                <span class="exec-stat-badge" style="background:rgba(255,255,255,0.2);color:white;">เข้างาน</span>
+              </div>
+              <div class="exec-stat-num" id="indvTotalIn">—</div>
+              <div class="exec-stat-label">ครั้ง Check-in รวมทั้งหมด</div>
+              <div class="exec-stat-deco"></div>
+            </div>
+
+            <div class="exec-stat-card exec-red">
+              <div class="exec-stat-top">
+                <div class="exec-stat-icon-wrap" style="background:rgba(255,255,255,0.2);"><i class="fi fi-rr-sign-out-alt"></i></div>
+                <span class="exec-stat-badge" style="background:rgba(255,255,255,0.2);color:white;">ออกเวร</span>
+              </div>
+              <div class="exec-stat-num" id="indvTotalOut">—</div>
+              <div class="exec-stat-label">ครั้ง Check-out รวมทั้งหมด</div>
+              <div class="exec-stat-deco"></div>
+            </div>
+
+            <div class="exec-stat-card exec-blue">
+              <div class="exec-stat-top">
+                <div class="exec-stat-icon-wrap" style="background:rgba(255,255,255,0.2);"><i class="fi fi-rr-shield-check"></i></div>
+                <span class="exec-stat-badge" style="background:rgba(255,255,255,0.2);color:white;">ปฏิบัติงาน</span>
+              </div>
+              <div class="exec-stat-num" id="indvActiveCount">—</div>
+              <div class="exec-stat-label">คน เคยปฏิบัติงาน</div>
+              <div class="exec-stat-deco"></div>
+            </div>
+
+            <div class="exec-stat-card exec-indigo">
+              <div class="exec-stat-top">
+                <div class="exec-stat-icon-wrap" style="background:rgba(255,255,255,0.2);"><i class="fi fi-rr-users-alt"></i></div>
+                <span class="exec-stat-badge" style="background:rgba(255,255,255,0.2);color:white;">สมาชิก</span>
+              </div>
+              <div class="exec-stat-num" id="indvTotalMembers">—</div>
+              <div class="exec-stat-label">คน สมาชิกทั้งหมด</div>
+              <div class="exec-stat-deco"></div>
+            </div>
+
+          </div>
+
+          <!-- ── ตารางสรุปสถิติรายบุคคล ── -->
+          <div class="indv-card">
+
+            <!-- Header -->
+            <div class="indv-header">
+              <div>
+                <h2 class="indv-title">
+                  <i class="fi fi-rr-users-alt" style="color:var(--primary);font-size:1.1rem;"></i>
+                  สรุปสถิติรายบุคคล
+                </h2>
+                <p class="indv-sub">ภาพรวมการ Check-in / Check-out ของเจ้าหน้าที่ทุกคน</p>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:0.72rem;color:#94a3b8;font-weight:500;">อัปเดตล่าสุด</div>
+                <div style="font-size:0.78rem;color:#475569;font-weight:700;" id="indvLastUpdate">—</div>
+              </div>
+            </div>
+
+            <!-- Search & Refresh -->
+            <div class="indv-toolbar">
+              <div style="position:relative;flex:1;max-width:320px;">
+                <i class="fi fi-rr-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:13px;pointer-events:none;"></i>
+                <input type="text" id="indvSearch" placeholder="ค้นหาชื่อ, จุดปฏิบัติงาน..." class="indv-search-input" oninput="filterIndvTable()">
+              </div>
+              <button onclick="loadIndvStats()" class="indv-refresh-btn" title="รีเฟรช">
+                <i class="fi fi-rr-rotate-right" id="indvRefreshIcon"></i>
+              </button>
+            </div>
+
+            <!-- Table -->
+            <div style="overflow-x:auto;">
+              <table class="indv-table">
+                <thead>
+                  <tr>
+                    <th class="indv-th-center" style="width:48px;">ลำดับ</th>
+                    <th>ชื่อ - นามสกุล</th>
+                    <th>จุดปฏิบัติงาน</th>
+                    <th class="indv-th-center">เข้า</th>
+                    <th class="indv-th-center">ออก</th>
+                    <th class="indv-th-center">รวม</th>
+                    <th>เช็คอินล่าสุด</th>
+                    <th>เช็คเอาท์ล่าสุด</th>
+                  </tr>
+                </thead>
+                <tbody id="indvTableBody">
+                  <tr><td colspan="8" class="indv-loading-cell">
+                    <div class="indv-loading-spinner"></div>
+                    <span>กำลังโหลดข้อมูล...</span>
+                  </td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Footer + Pagination -->
+            <div class="indv-footer">
+              <span id="indvRowCount" style="font-size:0.78rem;color:#94a3b8;">— รายการ</span>
+              <div class="indv-pagination" id="indvPagination"></div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============ VIEW: MEMBER MAP (เหตุการณ์) ============ -->
+        <section id="viewMemberMap" class="view-section">
+
+          <!-- Header -->
+          <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9); border-radius:16px; padding:20px 24px; margin-bottom:16px; color:white; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.08);"></div>
+            <div style="position:absolute; bottom:-30px; right:40px; width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,0.05);"></div>
+            <div style="display:flex; align-items:center; gap:10px; position:relative; z-index:2;">
+              <div style="width:40px; height:40px; background:rgba(255,255,255,0.15); border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                <i class="fi fi-rr-map" style="font-size:18px;"></i>
+              </div>
+              <div>
+                <h2 style="font-weight:800; font-size:1.1rem; margin:0;">แผนที่เหตุการณ์</h2>
+                <p style="font-size:0.8rem; opacity:0.7; margin:2px 0 0;">ดูตำแหน่งเหตุการณ์ทั้งหมดบนแผนที่</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Map Toolbar -->
+          <div class="map-card">
+            <div class="map-toolbar">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <button id="btnMemberMapStreet" onclick="switchMemberMapLayer('street')" class="map-layer-btn active-layer">
+                  <i class="fi fi-rr-map"></i> แผนที่
+                </button>
+                <button id="btnMemberMapSat" onclick="switchMemberMapLayer('satellite')" class="map-layer-btn">
+                  <i class="fi fi-rr-satellite"></i> ดาวเทียม
+                </button>
+                <div style="width:1px;height:24px;background:#e2e8f0;"></div>
+                <button onclick="refreshMemberMap()" class="map-icon-btn" title="รีเฟรช">
+                  <i class="fi fi-rr-rotate-right"></i>
+                </button>
+                <button onclick="memberMapLocateMe()" class="map-icon-btn" title="หาตำแหน่งฉัน">
+                  <i class="fi fi-rr-map-marker"></i>
+                </button>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.78rem; color:#94a3b8;">เหตุการณ์ที่ดำเนินการ:</span>
+                <span id="memberMapIncCount" style="background:#ef4444; color:white; font-size:0.75rem; font-weight:700; min-width:24px; height:24px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; padding:0 8px;">0</span>
+              </div>
+            </div>
+            <div id="memberMapContainer" style="height:400px; border-radius:0 0 12px 12px;"></div>
+          </div>
+
+          <!-- Incident List Card -->
+          <div class="map-list-card" style="margin-top:16px;">
+            <div class="map-list-header-row">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; background:linear-gradient(135deg,#ef4444,#dc2626); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                  <i class="fi fi-sr-siren-on" style="font-size:15px; color:white; line-height:1;"></i>
+                </div>
+                <div>
+                  <h4 class="map-list-title">เหตุการณ์</h4>
+                  <p class="map-list-sub" id="memberMapListSub">รายการเหตุการณ์ที่ยังไม่จัดการ</p>
+                </div>
+              </div>
+            </div>
+            <!-- Tab Buttons: Active / History -->
+            <div style="padding:0 16px 8px; display:flex; gap:6px;">
+              <button onclick="switchMemberIncidentTab('active')" id="memberIncTabActive" class="inc-filter-btn inc-filter-active" style="flex:1;">
+                <i class="fi fi-sr-circle" style="font-size:7px; color:#ef4444; vertical-align:middle; margin-right:2px;"></i> กำลังดำเนินการ <span id="memberIncActiveCount" style="background:#ef4444; color:white; font-size:0.65rem; padding:1px 7px; border-radius:10px; margin-left:4px; font-weight:700;">0</span>
+              </button>
+              <button onclick="switchMemberIncidentTab('history')" id="memberIncTabHistory" class="inc-filter-btn" style="flex:1;">
+                <i class="fi fi-sr-circle" style="font-size:7px; color:#22c55e; vertical-align:middle; margin-right:2px;"></i> ประวัติ (จัดการแล้ว)
+              </button>
+            </div>
+            <div id="memberMapIncidentList" style="padding:0 16px 16px;">
+              <div style="text-align:center; padding:24px 0; color:#94a3b8;">
+                <span style="font-size:0.82rem;">กำลังโหลด...</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============ VIEW: EMERGENCY (แจ้งเหตุด่วน) ============ -->
+        <section id="viewEmergency" class="view-section">
+
+          <!-- Hero compact -->
+          <div style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%); border-radius:20px; padding:20px 22px; margin-bottom:16px; color:white; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:-40px; right:-40px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.05);"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; position:relative; z-index:2;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:44px; height:44px; background:rgba(255,255,255,0.15); border-radius:14px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); flex-shrink:0;">
+                  <i class="fi fi-sr-siren-on" style="font-size:20px; color:white; line-height:1;"></i>
+                </div>
+                <div>
+                  <h2 style="font-weight:800; font-size:1.1rem; margin:0;">แจ้งเหตุด่วน</h2>
+                  <p style="font-size:0.75rem; opacity:0.7; margin:2px 0 0;">ส่งข้อมูลเหตุการณ์พร้อมพิกัด GPS</p>
+                </div>
+              </div>
+              <button onclick="openEmergencyModal()" style="background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.35); color:white; padding:10px 18px; border-radius:12px; font-size:0.82rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; backdrop-filter:blur(4px); transition:all 0.2s; white-space:nowrap;">
+                <i class="fi fi-rr-plus" style="font-size:12px;"></i> แจ้งเหตุใหม่
+              </button>
+            </div>
+          </div>
+
+          <!-- Summary Stats -->
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
+            <div class="card-modern" style="padding:14px; text-align:center;">
+              <div style="width:30px; height:30px; border-radius:9px; background:#fef2f2; display:flex; align-items:center; justify-content:center; margin:0 auto 6px;">
+                <i class="fi fi-rr-time-quarter-past" style="font-size:13px; color:#ef4444; line-height:1;"></i>
+              </div>
+              <div style="font-size:1.2rem; font-weight:800; color:#ef4444;" id="incStatNew">0</div>
+              <div style="font-size:0.7rem; color:#94a3b8; font-weight:500;">รอดำเนินการ</div>
+            </div>
+            <div class="card-modern" style="padding:14px; text-align:center;">
+              <div style="width:30px; height:30px; border-radius:9px; background:#fefce8; display:flex; align-items:center; justify-content:center; margin:0 auto 6px;">
+                <i class="fi fi-rr-eye" style="font-size:13px; color:#f59e0b; line-height:1;"></i>
+              </div>
+              <div style="font-size:1.2rem; font-weight:800; color:#f59e0b;" id="incStatAck">0</div>
+              <div style="font-size:0.7rem; color:#94a3b8; font-weight:500;">รับทราบแล้ว</div>
+            </div>
+            <div class="card-modern" style="padding:14px; text-align:center;">
+              <div style="width:30px; height:30px; border-radius:9px; background:#ecfdf5; display:flex; align-items:center; justify-content:center; margin:0 auto 6px;">
+                <i class="fi fi-rr-check-circle" style="font-size:13px; color:#22c55e; line-height:1;"></i>
+              </div>
+              <div style="font-size:1.2rem; font-weight:800; color:#22c55e;" id="incStatDone">0</div>
+              <div style="font-size:0.7rem; color:#94a3b8; font-weight:500;">จัดการแล้ว</div>
+            </div>
+          </div>
+
+          <!-- Filter Tabs + Table -->
+          <div class="card-modern" style="padding:0; overflow:hidden;">
+            <div style="padding:14px 18px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <div style="display:flex; gap:4px; flex-wrap:wrap;" id="incFilterTabs">
+                <button onclick="filterMyIncidents('all')" class="inc-filter-btn inc-filter-active" data-filter="all">ทั้งหมด</button>
+                <button onclick="filterMyIncidents('new')" class="inc-filter-btn" data-filter="new"><i class="fi fi-sr-circle" style="font-size:6px; color:#ef4444; vertical-align:middle; margin-right:2px;"></i> รอดำเนินการ</button>
+                <button onclick="filterMyIncidents('acknowledged')" class="inc-filter-btn" data-filter="acknowledged"><i class="fi fi-sr-circle" style="font-size:6px; color:#f59e0b; vertical-align:middle; margin-right:2px;"></i> รับทราบ</button>
+                <button onclick="filterMyIncidents('resolved')" class="inc-filter-btn" data-filter="resolved"><i class="fi fi-sr-circle" style="font-size:6px; color:#22c55e; vertical-align:middle; margin-right:2px;"></i> จัดการแล้ว</button>
+              </div>
+              <button onclick="loadMyIncidents()" class="page-btn" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:10px; flex-shrink:0;" title="รีเฟรช">
+                <i class="fi fi-rr-rotate-right" style="font-size:13px;"></i>
+              </button>
+            </div>
+
+            <!-- Table Container -->
+            <div id="myIncidentsList" style="overflow-x:auto;">
+              <div style="text-align:center; padding:32px 0; color:#94a3b8;">
+                <i class="fi fi-rr-spinner" style="font-size:18px; display:block; margin-bottom:6px; opacity:0.5;"></i>
+                <span style="font-size:0.82rem;">กำลังโหลด...</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============ MODAL: แจ้งเหตุใหม่ ============ -->
+        <div id="emergencyModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); animation:fadeIn 0.2s;">
+          <div style="position:absolute; inset:0;" onclick="closeEmergencyModal()"></div>
+          <div id="emergencyModalContent" style="position:relative; z-index:1; max-width:480px; width:calc(100% - 32px); margin:auto; top:50%; transform:translateY(-50%); background:white; border-radius:20px; box-shadow:0 25px 60px rgba(0,0,0,0.25); max-height:90vh; overflow-y:auto; animation:slideUp 0.3s ease-out;">
+
+            <!-- Modal Header -->
+            <div style="background:linear-gradient(135deg,#dc2626,#991b1b); padding:22px 24px; border-radius:20px 20px 0 0; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:2;">
+              <div style="display:flex; align-items:center; gap:12px; color:white;">
+                <div style="width:40px; height:40px; background:rgba(255,255,255,0.15); border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                  <i class="fi fi-sr-siren-on" style="font-size:18px; line-height:1;"></i>
+                </div>
+                <div>
+                  <h3 style="font-weight:800; font-size:1.05rem; margin:0;">แจ้งเหตุใหม่</h3>
+                  <p style="font-size:0.72rem; opacity:0.7; margin:2px 0 0;">กรอกข้อมูลเหตุการณ์</p>
+                </div>
+              </div>
+              <button onclick="closeEmergencyModal()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:34px; height:34px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s;">
+                <i class="fi fi-rr-cross-small" style="font-size:16px; line-height:1;"></i>
+              </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding:22px 24px;">
+              <form id="emergencyForm" onsubmit="submitEmergency(event)">
+
+                <!-- ระดับความรุนแรง -->
+                <div style="margin-bottom:18px;">
+                  <label style="font-weight:700; font-size:0.82rem; color:#1e293b; display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                    <i class="fi fi-rr-triangle-warning" style="color:#ef4444; font-size:13px;"></i> ระดับความรุนแรง
+                  </label>
+                  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+                    <label style="cursor:pointer;">
+                      <input type="radio" name="severity" value="low" style="display:none;">
+                      <div class="severity-option" data-severity="low" onclick="selectSeverity(this,'low')"
+                           style="text-align:center; padding:12px 6px; border:2px solid #e2e8f0; border-radius:12px; transition:all 0.2s;">
+                        <div style="width:26px; height:26px; border-radius:50%; background:#dcfce7; display:flex; align-items:center; justify-content:center; margin:0 auto 5px;">
+                          <i class="fi fi-sr-shield-check" style="font-size:11px; color:#16a34a; line-height:1;"></i>
+                        </div>
+                        <div style="font-size:0.78rem; font-weight:700; color:#475569;">ทั่วไป</div>
+                      </div>
+                    </label>
+                    <label style="cursor:pointer;">
+                      <input type="radio" name="severity" value="medium" style="display:none;" checked>
+                      <div class="severity-option selected" data-severity="medium" onclick="selectSeverity(this,'medium')"
+                           style="text-align:center; padding:12px 6px; border:2px solid #f59e0b; border-radius:12px; background:#fefce8; transition:all 0.2s;">
+                        <div style="width:26px; height:26px; border-radius:50%; background:#fef3c7; display:flex; align-items:center; justify-content:center; margin:0 auto 5px;">
+                          <i class="fi fi-sr-exclamation" style="font-size:11px; color:#d97706; line-height:1;"></i>
+                        </div>
+                        <div style="font-size:0.78rem; font-weight:700; color:#475569;">ปานกลาง</div>
+                      </div>
+                    </label>
+                    <label style="cursor:pointer;">
+                      <input type="radio" name="severity" value="high" style="display:none;">
+                      <div class="severity-option" data-severity="high" onclick="selectSeverity(this,'high')"
+                           style="text-align:center; padding:12px 6px; border:2px solid #e2e8f0; border-radius:12px; transition:all 0.2s;">
+                        <div style="width:26px; height:26px; border-radius:50%; background:#fee2e2; display:flex; align-items:center; justify-content:center; margin:0 auto 5px;">
+                          <i class="fi fi-sr-siren-on" style="font-size:11px; color:#dc2626; line-height:1;"></i>
+                        </div>
+                        <div style="font-size:0.78rem; font-weight:700; color:#475569;">ฉุกเฉิน</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- ประเภทเหตุการณ์ -->
+                <div style="margin-bottom:18px;">
+                  <label style="font-weight:700; font-size:0.82rem; color:#1e293b; display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                    <i class="fi fi-rr-list" style="color:var(--primary); font-size:13px;"></i> ประเภทเหตุการณ์
+                  </label>
+                  <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;">
+                    <label style="cursor:pointer;"><input type="radio" name="incidentType" value="อุบัติเหตุจราจร" style="display:none;"><div class="incident-type-option" onclick="selectIncType(this)" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;transition:all 0.2s;"><div style="width:30px;height:30px;border-radius:8px;background:#fef2f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fi fi-rr-car-crash" style="font-size:13px;color:#dc2626;line-height:1;"></i></div><span style="font-size:0.8rem;font-weight:600;color:#334155;">อุบัติเหตุจราจร</span></div></label>
+                    <label style="cursor:pointer;"><input type="radio" name="incidentType" value="ไฟไหม้" style="display:none;"><div class="incident-type-option" onclick="selectIncType(this)" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;transition:all 0.2s;"><div style="width:30px;height:30px;border-radius:8px;background:#fff7ed;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fi fi-rr-flame" style="font-size:13px;color:#ea580c;line-height:1;"></i></div><span style="font-size:0.8rem;font-weight:600;color:#334155;">ไฟไหม้</span></div></label>
+                    <label style="cursor:pointer;"><input type="radio" name="incidentType" value="น้ำท่วม" style="display:none;"><div class="incident-type-option" onclick="selectIncType(this)" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;transition:all 0.2s;"><div style="width:30px;height:30px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fi fi-rr-water" style="font-size:13px;color:#2563eb;line-height:1;"></i></div><span style="font-size:0.8rem;font-weight:600;color:#334155;">น้ำท่วม</span></div></label>
+                    <label style="cursor:pointer;"><input type="radio" name="incidentType" value="เจ็บป่วยฉุกเฉิน" style="display:none;"><div class="incident-type-option" onclick="selectIncType(this)" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;transition:all 0.2s;"><div style="width:30px;height:30px;border-radius:8px;background:#fdf4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fi fi-rr-heart-rate" style="font-size:13px;color:#c026d3;line-height:1;"></i></div><span style="font-size:0.8rem;font-weight:600;color:#334155;">เจ็บป่วยฉุกเฉิน</span></div></label>
+                    <label style="cursor:pointer;"><input type="radio" name="incidentType" value="ภัยธรรมชาติ" style="display:none;"><div class="incident-type-option" onclick="selectIncType(this)" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;transition:all 0.2s;"><div style="width:30px;height:30px;border-radius:8px;background:#ecfdf5;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fi fi-rr-thunderstorm" style="font-size:13px;color:#059669;line-height:1;"></i></div><span style="font-size:0.8rem;font-weight:600;color:#334155;">ภัยธรรมชาติ</span></div></label>
+                    <label style="cursor:pointer;"><input type="radio" name="incidentType" value="อื่นๆ" style="display:none;"><div class="incident-type-option" onclick="selectIncType(this)" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;transition:all 0.2s;"><div style="width:30px;height:30px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fi fi-rr-apps-add" style="font-size:13px;color:#64748b;line-height:1;"></i></div><span style="font-size:0.8rem;font-weight:600;color:#334155;">อื่นๆ</span></div></label>
+                  </div>
+                </div>
+
+                <!-- รายละเอียด -->
+                <div style="margin-bottom:18px;">
+                  <label style="font-weight:700; font-size:0.82rem; color:#1e293b; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    <i class="fi fi-rr-edit" style="color:var(--primary); font-size:13px;"></i> รายละเอียดเพิ่มเติม
+                  </label>
+                  <textarea id="emergencyDetail" class="form-input" rows="3" placeholder="อธิบายสถานการณ์เพิ่มเติม..." style="resize:vertical; border-radius:10px; border:2px solid #e2e8f0; padding:10px 12px; font-size:0.84rem; transition:border-color 0.2s; width:100%; box-sizing:border-box;"></textarea>
+                </div>
+
+                <!-- GPS Info -->
+                <div style="background:linear-gradient(135deg,#ecfdf5,#f0fdf4); border:1.5px solid #a7f3d0; border-radius:10px; padding:10px 14px; margin-bottom:18px; display:flex; align-items:center; gap:8px;">
+                  <div style="width:28px; height:28px; border-radius:8px; background:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fi fi-rr-map-marker" style="color:#059669; font-size:12px; line-height:1;"></i>
+                  </div>
+                  <span style="font-size:0.78rem; color:#047857; font-weight:500;">พิกัด GPS จะถูกส่งอัตโนมัติ</span>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" id="emergencySubmitBtn" class="btn-primary-custom"
+                        style="background:linear-gradient(135deg,#dc2626,#991b1b); box-shadow:0 8px 24px rgba(220,38,38,0.3); width:100%; padding:14px; font-size:0.9rem; border-radius:12px; font-weight:700; transition:all 0.2s;">
+                  <i class="fi fi-rr-paper-plane" style="margin-right:6px;"></i> ส่งแจ้งเหตุด่วน
+                </button>
+
+              </form>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ============ VIEW: CHAT (ย้ายเป็น popup) ============ -->
+
+        <!-- ============ VIEW: PATIENTS (ข้อมูลผู้ป่วย/ผู้บาดเจ็บ) ============ -->
+        <section id="viewPatients" class="view-section">
+
+          <!-- Hero Header -->
+          <div style="background:linear-gradient(135deg,#0369a1 0%,#0c4a6e 100%);border-radius:20px;padding:22px 26px;margin-bottom:20px;color:white;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-40px;right:-30px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:relative;z-index:2;">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                  <i class="fi fi-sr-heart-rate" style="font-size:22px;color:white;line-height:1;"></i>
+                </div>
+                <div>
+                  <h2 style="font-weight:800;font-size:1.15rem;margin:0;">บันทึกข้อมูลผู้ป่วย / ผู้บาดเจ็บ</h2>
+                  <p style="font-size:0.78rem;opacity:0.75;margin:3px 0 0;">ระบบ EMS — บันทึก ค้นหา และดูประวัติย้อนหลัง</p>
+                </div>
+              </div>
+              <button onclick="openPatientFormModal()" style="background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.35);color:white;padding:10px 20px;border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;backdrop-filter:blur(4px);">
+                <i class="fi fi-rr-plus" style="font-size:12px;"></i> บันทึกผู้ป่วยใหม่
+              </button>
+            </div>
+          </div>
+
+          <!-- Search Bar -->
+          <div style="background:white;border-radius:16px;padding:16px 20px;margin-bottom:16px;border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <div style="position:relative;flex:1;min-width:220px;">
+                <i class="fi fi-rr-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none;"></i>
+                <input type="text" id="patientSearchInput" placeholder="ค้นหาจาก ชื่อ, เลขบัตรประชาชน, HN, สถานที่..." 
+                       class="form-input" style="padding-left:38px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:0.85rem;"
+                       oninput="onPatientSearchInput(this.value)">
+              </div>
+              <button onclick="clearPatientSearch()" id="patientSearchClearBtn" style="display:none;padding:0 14px;height:40px;border:1.5px solid #e2e8f0;border-radius:10px;background:white;color:#64748b;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
+                <i class="fi fi-rr-cross-small"></i> ล้าง
+              </button>
+              <button onclick="loadPatientRecords()" style="padding:0 16px;height:40px;border:1.5px solid #e2e8f0;border-radius:10px;background:white;color:#64748b;cursor:pointer;" title="รีเฟรช">
+                <i class="fi fi-rr-rotate-right" id="patientRefreshIcon"></i>
+              </button>
+            </div>
+            <div id="patientSearchStatus" style="font-size:0.78rem;color:#64748b;margin-top:8px;display:none;"></div>
+          </div>
+
+          <!-- Records List -->
+          <div id="patientRecordsList">
+            <div style="text-align:center;padding:40px 0;color:#94a3b8;">
+              <i class="fi fi-rr-spinner" style="font-size:22px;display:block;margin-bottom:8px;opacity:0.4;"></i>
+              <span style="font-size:0.85rem;">กำลังโหลดข้อมูล...</span>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============ MODAL: บันทึกผู้ป่วย ============ -->
+        <div id="patientFormModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(5px);">
+          <div style="position:absolute;inset:0;" onclick="closePatientFormModal()"></div>
+          <div style="position:relative;z-index:1;max-width:620px;width:calc(100% - 24px);margin:auto;top:50%;transform:translateY(-50%);background:white;border-radius:20px;box-shadow:0 30px 70px rgba(0,0,0,0.25);max-height:92vh;overflow-y:auto;">
+
+            <!-- Modal Header -->
+            <div style="background:linear-gradient(135deg,#0369a1,#0c4a6e);padding:20px 24px;border-radius:20px 20px 0 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2;">
+              <div style="display:flex;align-items:center;gap:12px;color:white;">
+                <div style="width:40px;height:40px;background:rgba(255,255,255,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                  <i class="fi fi-sr-heart-rate" style="font-size:18px;line-height:1;"></i>
+                </div>
+                <div>
+                  <h3 id="patientModalTitle" style="font-weight:800;font-size:1rem;margin:0;">บันทึกข้อมูลผู้ป่วย</h3>
+                  <p style="font-size:0.72rem;opacity:0.7;margin:2px 0 0;">กรอกข้อมูลผู้ป่วย / ผู้บาดเจ็บ</p>
+                </div>
+              </div>
+              <button onclick="closePatientFormModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:34px;height:34px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                <i class="fi fi-rr-cross-small" style="font-size:16px;line-height:1;"></i>
+              </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding:22px 24px;">
+              <form id="patientForm" onsubmit="submitPatientForm(event)">
+                <input type="hidden" id="patientEditId">
+
+                <!-- ── ส่วน 1: ข้อมูลเหตุการณ์ ── -->
+                <div style="background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:18px;border:1px solid #e2e8f0;">
+                  <div style="font-weight:800;font-size:0.85rem;color:#0369a1;margin-bottom:14px;display:flex;align-items:center;gap:7px;">
+                    <i class="fi fi-rr-calendar" style="font-size:14px;"></i> ข้อมูลเหตุการณ์
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">วันที่เกิดเหตุ</label>
+                      <input type="date" id="pat_incidentDate" class="form-input" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">เวลาเกิดเหตุ</label>
+                      <input type="time" id="pat_incidentTime" class="form-input" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">สาเหตุ / ประเภทเหตุ</label>
+                      <input type="text" id="pat_incidentReason" class="form-input" placeholder="เช่น อุบัติเหตุจราจร, เจ็บป่วยฉุกเฉิน..." style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">สถานที่เกิดเหตุ</label>
+                      <input type="text" id="pat_incidentLocation" class="form-input" placeholder="บ้านเลขที่ / ถนน / ซอย..." style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">เบอร์ผู้แจ้ง</label>
+                      <input type="text" id="pat_reporterNumber" class="form-input" placeholder="0XX-XXXXXXX" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">ประเภทผู้ปฏิบัติงาน</label>
+                      <select id="pat_responderType" class="form-input" style="border-radius:8px;font-size:0.85rem;">
+                        <option value="">-- เลือก --</option>
+                        <option value="กู้ชีพ">กู้ชีพ</option>
+                        <option value="กู้ภัย">กู้ภัย</option>
+                        <option value="EMS">EMS</option>
+                        <option value="สก.">สก.</option>
+                        <option value="2.13">2.13</option>
+                        <option value="อื่นๆ">อื่นๆ</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ── ส่วน 2: ผู้ป่วย/ผู้บาดเจ็บ คนที่ 1 ── -->
+                <div style="background:#fef9ff;border-radius:12px;padding:16px;margin-bottom:18px;border:1px solid #e9d5f7;">
+                  <div style="font-weight:800;font-size:0.85rem;color:#7c3aed;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+                    <span style="display:flex;align-items:center;gap:7px;">
+                      <i class="fi fi-rr-user" style="font-size:14px;"></i> ผู้ป่วย / ผู้บาดเจ็บ คนที่ 1
+                    </span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div style="grid-column:1/-1;">
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">ชื่อ - นามสกุล</label>
+                      <input type="text" id="pat_p1_name" class="form-input" placeholder="ชื่อผู้ป่วย" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">เลขบัตรประชาชน</label>
+                      <input type="text" id="pat_p1_idCard" class="form-input" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">HN (เลขประวัติ)</label>
+                      <input type="text" id="pat_p1_hn" class="form-input" placeholder="HN-XXXXXX" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">อายุ (ปี)</label>
+                      <input type="number" id="pat_p1_age" class="form-input" placeholder="อายุ" min="0" max="150" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">เพศ</label>
+                      <select id="pat_p1_gender" class="form-input" style="border-radius:8px;font-size:0.85rem;">
+                        <option value="">-- เลือก --</option>
+                        <option value="ชาย">ชาย</option>
+                        <option value="หญิง">หญิง</option>
+                        <option value="ไม่ระบุ">ไม่ระบุ</option>
+                      </select>
+                    </div>
+                    <div style="grid-column:1/-1;">
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">การบาดเจ็บ / อาการ</label>
+                      <textarea id="pat_p1_injury" class="form-input" rows="2" placeholder="อธิบายอาการหรือการบาดเจ็บ..." style="border-radius:8px;font-size:0.85rem;resize:vertical;"></textarea>
+                    </div>
+                    <div style="grid-column:1/-1;">
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">กลไกการบาดเจ็บ</label>
+                      <input type="text" id="pat_p1_mechanism" class="form-input" placeholder="เช่น รถชน, ตกจากที่สูง..." style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <!-- Vital Signs P1 -->
+                    <div style="grid-column:1/-1;background:#fff;border-radius:10px;padding:12px;border:1px solid #ede9fe;">
+                      <div style="font-size:0.78rem;font-weight:700;color:#7c3aed;margin-bottom:10px;">🩺 Vital Signs</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                        <div>
+                          <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">BP (mmHg)</label>
+                          <input type="text" id="pat_p1_bp" class="form-input" placeholder="120/80" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                        </div>
+                        <div>
+                          <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Pulse (ครั้ง/นาที)</label>
+                          <input type="text" id="pat_p1_pulse" class="form-input" placeholder="80" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                        </div>
+                        <div>
+                          <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">RR (ครั้ง/นาที)</label>
+                          <input type="text" id="pat_p1_rr" class="form-input" placeholder="18" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                        </div>
+                        <div>
+                          <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">SpO2 (%)</label>
+                          <input type="text" id="pat_p1_spo2" class="form-input" placeholder="98" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                        </div>
+                        <div>
+                          <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">GCS</label>
+                          <input type="text" id="pat_p1_gcs" class="form-input" placeholder="15" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                        </div>
+                        <div>
+                          <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Temp (°C)</label>
+                          <input type="text" id="pat_p1_temp" class="form-input" placeholder="37.0" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">นำส่งโรงพยาบาล</label>
+                      <input type="text" id="pat_p1_hospital" class="form-input" placeholder="ชื่อโรงพยาบาล" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <!-- Photo Upload P1 -->
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">รูปภาพผู้ป่วย</label>
+                      <div id="pat_p1_photoPreviewWrap" style="display:none;margin-bottom:6px;">
+                        <img id="pat_p1_photoPreview" src="" style="width:70px;height:70px;object-fit:cover;border-radius:10px;border:2px solid #e2e8f0;" onerror="this.style.display='none'">
+                        <button type="button" onclick="clearPatientPhoto(1)" style="display:block;margin-top:4px;font-size:0.72rem;color:#ef4444;border:none;background:none;cursor:pointer;padding:0;">
+                          <i class="fi fi-rr-trash"></i> ลบรูป
+                        </button>
+                      </div>
+                      <input type="hidden" id="pat_p1_photo">
+                      <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#eff6ff;border:1.5px dashed #93c5fd;border-radius:9px;cursor:pointer;font-size:0.78rem;font-weight:600;color:#2563eb;">
+                        <i class="fi fi-rr-camera"></i> เลือกรูป
+                        <input type="file" accept="image/*" style="display:none;" onchange="handlePatientPhotoChange(event,1)">
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ── ส่วน 3: ผู้ป่วย/ผู้บาดเจ็บ คนที่ 2 (optional) ── -->
+                <div style="margin-bottom:18px;">
+                  <button type="button" onclick="togglePatient2()" id="toggleP2Btn"
+                    style="width:100%;padding:11px;border:1.5px dashed #cbd5e1;border-radius:12px;background:transparent;color:#64748b;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+                    <i class="fi fi-rr-user-add" id="toggleP2Icon"></i>
+                    <span id="toggleP2Text">เพิ่มผู้ป่วย / ผู้บาดเจ็บ คนที่ 2</span>
+                  </button>
+                </div>
+
+                <div id="patient2Block" style="display:none;">
+                  <div style="background:#fff7f0;border-radius:12px;padding:16px;margin-bottom:18px;border:1px solid #fed7aa;">
+                    <div style="font-weight:800;font-size:0.85rem;color:#ea580c;margin-bottom:14px;display:flex;align-items:center;gap:7px;">
+                      <i class="fi fi-rr-user" style="font-size:14px;"></i> ผู้ป่วย / ผู้บาดเจ็บ คนที่ 2
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                      <div style="grid-column:1/-1;">
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">ชื่อ - นามสกุล</label>
+                        <input type="text" id="pat_p2_name" class="form-input" placeholder="ชื่อผู้ป่วย" style="border-radius:8px;font-size:0.85rem;">
+                      </div>
+                      <div>
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">เลขบัตรประชาชน</label>
+                        <input type="text" id="pat_p2_idCard" class="form-input" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17" style="border-radius:8px;font-size:0.85rem;">
+                      </div>
+                      <div>
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">HN (เลขประวัติ)</label>
+                        <input type="text" id="pat_p2_hn" class="form-input" placeholder="HN-XXXXXX" style="border-radius:8px;font-size:0.85rem;">
+                      </div>
+                      <div>
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">อายุ (ปี)</label>
+                        <input type="number" id="pat_p2_age" class="form-input" placeholder="อายุ" min="0" max="150" style="border-radius:8px;font-size:0.85rem;">
+                      </div>
+                      <div>
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">เพศ</label>
+                        <select id="pat_p2_gender" class="form-input" style="border-radius:8px;font-size:0.85rem;">
+                          <option value="">-- เลือก --</option>
+                          <option value="ชาย">ชาย</option>
+                          <option value="หญิง">หญิง</option>
+                          <option value="ไม่ระบุ">ไม่ระบุ</option>
+                        </select>
+                      </div>
+                      <div style="grid-column:1/-1;">
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">การบาดเจ็บ / อาการ</label>
+                        <textarea id="pat_p2_injury" class="form-input" rows="2" placeholder="อธิบายอาการหรือการบาดเจ็บ..." style="border-radius:8px;font-size:0.85rem;resize:vertical;"></textarea>
+                      </div>
+                      <div style="grid-column:1/-1;">
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">กลไกการบาดเจ็บ</label>
+                        <input type="text" id="pat_p2_mechanism" class="form-input" placeholder="เช่น รถชน, ตกจากที่สูง..." style="border-radius:8px;font-size:0.85rem;">
+                      </div>
+                      <div style="grid-column:1/-1;background:#fff;border-radius:10px;padding:12px;border:1px solid #fed7aa;">
+                        <div style="font-size:0.78rem;font-weight:700;color:#ea580c;margin-bottom:10px;">🩺 Vital Signs</div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                          <div>
+                            <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">BP (mmHg)</label>
+                            <input type="text" id="pat_p2_bp" class="form-input" placeholder="120/80" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                          </div>
+                          <div>
+                            <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Pulse</label>
+                            <input type="text" id="pat_p2_pulse" class="form-input" placeholder="80" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                          </div>
+                          <div>
+                            <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">RR</label>
+                            <input type="text" id="pat_p2_rr" class="form-input" placeholder="18" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                          </div>
+                          <div>
+                            <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">SpO2 (%)</label>
+                            <input type="text" id="pat_p2_spo2" class="form-input" placeholder="98" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                          </div>
+                          <div>
+                            <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">GCS</label>
+                            <input type="text" id="pat_p2_gcs" class="form-input" placeholder="15" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                          </div>
+                          <div>
+                            <label style="font-size:0.72rem;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Temp (°C)</label>
+                            <input type="text" id="pat_p2_temp" class="form-input" placeholder="37.0" style="border-radius:7px;font-size:0.82rem;padding:7px 10px;">
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">นำส่งโรงพยาบาล</label>
+                        <input type="text" id="pat_p2_hospital" class="form-input" placeholder="ชื่อโรงพยาบาล" style="border-radius:8px;font-size:0.85rem;">
+                      </div>
+                      <div>
+                        <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">รูปภาพผู้ป่วย</label>
+                        <div id="pat_p2_photoPreviewWrap" style="display:none;margin-bottom:6px;">
+                          <img id="pat_p2_photoPreview" src="" style="width:70px;height:70px;object-fit:cover;border-radius:10px;border:2px solid #e2e8f0;" onerror="this.style.display='none'">
+                          <button type="button" onclick="clearPatientPhoto(2)" style="display:block;margin-top:4px;font-size:0.72rem;color:#ef4444;border:none;background:none;cursor:pointer;padding:0;">
+                            <i class="fi fi-rr-trash"></i> ลบรูป
+                          </button>
+                        </div>
+                        <input type="hidden" id="pat_p2_photo">
+                        <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff7ed;border:1.5px dashed #fdba74;border-radius:9px;cursor:pointer;font-size:0.78rem;font-weight:600;color:#ea580c;">
+                          <i class="fi fi-rr-camera"></i> เลือกรูป
+                          <input type="file" accept="image/*" style="display:none;" onchange="handlePatientPhotoChange(event,2)">
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ── ส่วน 4: ทีมงาน ── -->
+                <div style="background:#f0fdf4;border-radius:12px;padding:16px;margin-bottom:20px;border:1px solid #bbf7d0;">
+                  <div style="font-weight:800;font-size:0.85rem;color:#15803d;margin-bottom:14px;display:flex;align-items:center;gap:7px;">
+                    <i class="fi fi-rr-users-alt" style="font-size:14px;"></i> ทีมงาน / ยานพาหนะ
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">ผู้ขับรถ</label>
+                      <input type="text" id="pat_operator" class="form-input" placeholder="ชื่อผู้ขับรถ" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">พยาบาล/เจ้าหน้าที่กู้ชีพ</label>
+                      <input type="text" id="pat_paramedic" class="form-input" placeholder="ชื่อพยาบาล/กู้ชีพ" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">เจ้าหน้าที่กู้ชีพ</label>
+                      <input type="text" id="pat_ambulanceOfficer" class="form-input" placeholder="ชื่อเจ้าหน้าที่" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">ทะเบียนรถ</label>
+                      <input type="text" id="pat_vehicleNumber" class="form-input" placeholder="ทะเบียนรถพยาบาล" style="border-radius:8px;font-size:0.85rem;">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div style="display:flex;gap:10px;">
+                  <button type="button" onclick="closePatientFormModal()" style="flex:1;padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;background:white;color:#64748b;font-size:0.88rem;font-weight:700;cursor:pointer;">
+                    ยกเลิก
+                  </button>
+                  <button type="submit" id="patientSubmitBtn" style="flex:2;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,#0369a1,#0284c7);color:white;font-size:0.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(3,105,161,0.3);">
+                    <i class="fi fi-rr-disk"></i> บันทึกข้อมูล
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ MODAL: รายละเอียดผู้ป่วย ============ -->
+        <div id="patientDetailModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.55);backdrop-filter:blur(5px);">
+          <div style="position:absolute;inset:0;" onclick="closeModal('patientDetailModal')"></div>
+          <div id="patientDetailContent" style="position:relative;z-index:1;max-width:580px;width:calc(100% - 24px);margin:auto;top:50%;transform:translateY(-50%);background:white;border-radius:20px;box-shadow:0 30px 70px rgba(0,0,0,0.25);max-height:90vh;overflow-y:auto;"></div>
+        </div>
+
+        <!-- ============ VIEW: SETTINGS ============ -->
+        <section id="viewSettings" class="view-section">
+
+          <!-- Hero Banner -->
+          <div class="cfg-hero">
+            <div class="cfg-hero-bg"></div>
+            <div class="cfg-hero-content">
+              <div class="cfg-hero-icon">
+                <i class="fi fi-rr-settings"></i>
+              </div>
+              <div>
+                <h2 class="cfg-hero-title">ตั้งค่าหน่วยงาน</h2>
+                <p class="cfg-hero-sub">จัดการข้อมูลองค์กรและการแสดงผลในระบบ</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Grid -->
+          <form id="settingsForm" onsubmit="handleSaveSettings(event)">
+          <div class="cfg-grid">
+
+            <!-- LEFT: Logo Upload Card -->
+            <div class="cfg-card cfg-logo-card">
+              <div class="cfg-card-header">
+                <div class="cfg-card-icon-wrap" style="background:#eff6ff;">
+                  <i class="fi fi-rr-picture" style="color:var(--primary);font-size:14px;"></i>
+                </div>
+                <div>
+                  <h4 class="cfg-card-title">โลโก้หน่วยงาน</h4>
+                  <p class="cfg-card-sub">แสดงบน sidebar และหน้า login</p>
+                </div>
+              </div>
+
+              <!-- Upload Zone -->
+              <div class="cfg-logo-zone" id="cfgLogoZone" onclick="document.getElementById('cfgLogoFile').click()"
+                   ondragover="event.preventDefault();this.classList.add('dragging')"
+                   ondragleave="this.classList.remove('dragging')"
+                   ondrop="cfgLogoDrop(event)">
+                <img id="cfgLogoPreview" src="" alt="" style="display:none;" class="cfg-logo-preview">
+                <div id="cfgLogoPlaceholder" class="cfg-logo-placeholder">
+                  <div class="cfg-upload-icon">
+                    <i class="fi fi-rr-cloud-upload" style="font-size:28px;color:#93c5fd;"></i>
+                  </div>
+                  <p style="font-size:0.85rem;font-weight:600;color:#475569;margin:8px 0 4px;">คลิกหรือลากไฟล์มาวาง</p>
+                  <p style="font-size:0.75rem;color:#94a3b8;margin:0;">PNG, JPG, SVG · สูงสุด 2MB</p>
+                </div>
+                <input type="file" id="cfgLogoFile" accept="image/*" style="display:none;" onchange="cfgLogoChange(event)">
+              </div>
+
+              <!-- Logo actions -->
+              <div class="cfg-logo-actions" id="cfgLogoActions" style="display:none;">
+                <button type="button" class="cfg-logo-change-btn" onclick="document.getElementById('cfgLogoFile').click()">
+                  <i class="fi fi-rr-refresh"></i> เปลี่ยนรูป
+                </button>
+                <button type="button" class="cfg-logo-remove-btn" onclick="cfgLogoRemove()">
+                  <i class="fi fi-rr-trash"></i>
+                </button>
+              </div>
+
+              <!-- Hidden URL field for GAS -->
+              <input type="hidden" id="settingLogo">
+
+              <div class="cfg-logo-note">
+                <i class="fi fi-rr-info" style="color:#93c5fd;font-size:11px;"></i>
+                รูปภาพจะถูกอัปโหลดไปยัง Google Drive โดยอัตโนมัติ
+              </div>
+            </div>
+
+            <!-- RIGHT: Info Cards -->
+            <div style="display:flex;flex-direction:column;gap:16px;flex:1;min-width:0;">
+
+              <!-- Organization Info -->
+              <div class="cfg-card">
+                <div class="cfg-card-header">
+                  <div class="cfg-card-icon-wrap" style="background:#f0fdf4;">
+                    <i class="fi fi-rr-building" style="color:#059669;font-size:14px;"></i>
+                  </div>
+                  <div>
+                    <h4 class="cfg-card-title">ข้อมูลองค์กร</h4>
+                    <p class="cfg-card-sub">ชื่อระบบที่แสดงในแอปพลิเคชัน</p>
+                  </div>
+                </div>
+
+                <div class="cfg-form-group">
+                  <label class="cfg-label">
+                    <i class="fi fi-rr-text"></i> ชื่อระบบ / หน่วยงาน
+                    <span class="cfg-required">*</span>
+                  </label>
+                  <input type="text" id="settingAppName" class="cfg-input"
+                         placeholder="เช่น กู้ชีพกู้ภัย อบต.ตัวอย่าง" required>
+                </div>
+
+                <div class="cfg-form-group" style="margin-bottom:0;">
+                  <label class="cfg-label">
+                    <i class="fi fi-rr-phone-call"></i> เบอร์โทรศัพท์
+                  </label>
+                  <input type="text" id="settingPhone" class="cfg-input" placeholder="0XX-XXXXXXX">
+                </div>
+              </div>
+
+              <!-- Address Card -->
+              <div class="cfg-card">
+                <div class="cfg-card-header">
+                  <div class="cfg-card-icon-wrap" style="background:#fff7ed;">
+                    <i class="fi fi-rr-map-marker" style="color:#ea580c;font-size:14px;"></i>
+                  </div>
+                  <div>
+                    <h4 class="cfg-card-title">ที่ตั้งหน่วยงาน</h4>
+                    <p class="cfg-card-sub">ที่อยู่สำหรับใช้ในเอกสารและรายงาน</p>
+                  </div>
+                </div>
+
+                <div class="cfg-form-group">
+                  <label class="cfg-label"><i class="fi fi-rr-home"></i> ที่อยู่</label>
+                  <input type="text" id="settingAddress" class="cfg-input" placeholder="เลขที่ ถนน หมู่">
+                </div>
+
+                <div class="cfg-row-3">
+                  <div class="cfg-form-group" style="margin-bottom:0;">
+                    <label class="cfg-label">ตำบล</label>
+                    <input type="text" id="settingSubdistrict" class="cfg-input" placeholder="ตำบล">
+                  </div>
+                  <div class="cfg-form-group" style="margin-bottom:0;">
+                    <label class="cfg-label">อำเภอ</label>
+                    <input type="text" id="settingDistrict" class="cfg-input" placeholder="อำเภอ">
+                  </div>
+                  <div class="cfg-form-group" style="margin-bottom:0;">
+                    <label class="cfg-label">จังหวัด</label>
+                    <input type="text" id="settingProvince" class="cfg-input" placeholder="จังหวัด">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Telegram Settings Card -->
+          <div class="cfg-card" style="margin-top:16px;">
+            <div class="cfg-card-header">
+              <div class="cfg-card-icon-wrap" style="background:#eff6ff;">
+                <i class="fi fi-rr-paper-plane" style="color:#2563eb;font-size:14px;"></i>
+              </div>
+              <div>
+                <h4 class="cfg-card-title">การแจ้งเตือน Telegram</h4>
+                <p class="cfg-card-sub">ตั้งค่า Bot Token และ Chat ID สำหรับรับแจ้งเตือน</p>
+              </div>
+            </div>
+
+            <div class="cfg-form-group">
+              <label class="cfg-label">
+                <i class="fi fi-rr-key"></i> Bot Token
+              </label>
+              <input type="text" id="settingTelegramBot" class="cfg-input" placeholder="เช่น 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+              <p style="font-size:0.72rem; color:#94a3b8; margin-top:4px;">สร้าง Bot ผ่าน @BotFather ใน Telegram</p>
+            </div>
+
+            <div class="cfg-form-group">
+              <label class="cfg-label">
+                <i class="fi fi-rr-comment-alt"></i> Chat ID / Group ID
+              </label>
+              <input type="text" id="settingTelegramChat" class="cfg-input" placeholder="เช่น -1001234567890">
+              <p style="font-size:0.72rem; color:#94a3b8; margin-top:4px;">ใช้ @userinfobot หรือ @getmyid_bot เพื่อหา Chat ID</p>
+            </div>
+
+            <!-- Notification Options -->
+            <div style="margin-top:12px; border-top:1px solid #f1f5f9; padding-top:12px;">
+              <label style="font-weight:600; font-size:0.82rem; color:#475569; display:block; margin-bottom:10px;">
+                <i class="fi fi-rr-bell" style="color:var(--primary);"></i> แจ้งเตือนเมื่อ
+              </label>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85rem; color:#475569;">
+                  <input type="checkbox" id="settingTelegramNotifyIn" checked style="width:16px; height:16px; accent-color:var(--primary);">
+                  <i class="fi fi-sr-circle" style="font-size:7px; color:#22c55e;"></i> สมาชิก Check-in เข้าเวร
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85rem; color:#475569;">
+                  <input type="checkbox" id="settingTelegramNotifyOut" checked style="width:16px; height:16px; accent-color:var(--primary);">
+                  <i class="fi fi-sr-circle" style="font-size:7px; color:#ef4444;"></i> สมาชิก Check-out ออกเวร
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85rem; color:#475569;">
+                  <input type="checkbox" id="settingTelegramNotifyInc" checked style="width:16px; height:16px; accent-color:var(--primary);">
+                  <i class="fi fi-sr-siren-on" style="font-size:10px; color:#ef4444;"></i> มีการแจ้งเหตุด่วน
+                </label>
+              </div>
+            </div>
+
+            <!-- Test Button -->
+            <div style="margin-top:14px;">
+              <button type="button" id="btnTestTelegram" onclick="testTelegramConnection()" class="btn-save" style="width:auto; padding:8px 16px; font-size:0.82rem; border-radius:10px; gap:6px;">
+                <i class="fi fi-rr-paper-plane" style="font-size:12px;"></i> ทดสอบส่งข้อความ
+              </button>
+            </div>
+          </div>
+
+          <!-- Save Bar -->
+          <div class="cfg-save-bar">
+            <div class="cfg-save-hint">
+              <i class="fi fi-rr-info" style="color:#93c5fd;"></i>
+              การเปลี่ยนแปลงจะมีผลทันทีหลังบันทึก
+            </div>
+            <button type="submit" class="cfg-save-btn">
+              <i class="fi fi-rr-disk"></i>
+              บันทึกการตั้งค่า
+            </button>
+          </div>
+          </form>
+
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================
+       MODALS
+       ============================ -->
+
+  <!-- Register Modal -->
+  <div id="registerModalOverlay" class="modal-overlay" style="display:none;">
+    <div class="reg-modal-card">
+
+      <!-- Header -->
+      <div class="reg-modal-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <!-- Double stacked icons -->
+          <div class="reg-icon-stack">
+            <div class="reg-icon-bg"></div>
+            <div class="reg-icon-main"><i class="fi fi-rr-user-add"></i></div>
+            <div class="reg-icon-badge"><i class="fi fi-rr-plus-small"></i></div>
+          </div>
+          <div>
+            <h3 class="reg-modal-title" id="regTitle">เพิ่มข้อมูลสมาชิก</h3>
+            <p class="reg-modal-subtitle">กรอกข้อมูลเพื่อสร้างบัญชีสมาชิกใหม่</p>
+          </div>
+        </div>
+        <button onclick="closeModal('registerModalOverlay')" class="reg-close-btn">
+          <i class="fi fi-rr-cross-small" style="font-size:18px;"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="reg-modal-body">
+        <form id="regForm" onsubmit="handleRegister(event)">
+
+          <!-- Avatar Picker -->
+          <div class="reg-avatar-wrap">
+            <div class="reg-avatar-ring" onclick="document.getElementById('regPhoto').click()">
+              <img id="regAvatarPreview" src="" alt="" class="reg-avatar-img" style="display:none;">
+              <div id="regAvatarPlaceholder" class="reg-avatar-placeholder">
+                <i class="fi fi-rr-user" style="font-size:40px; color:#cbd5e1;"></i>
+              </div>
+              <div class="reg-avatar-cam">
+                <i class="fi fi-rr-camera" style="font-size:13px; color:white;"></i>
+              </div>
+            </div>
+            <input type="file" id="regPhoto" accept="image/*" style="display:none;">
+            <p class="reg-avatar-hint">แตะเพื่อเลือกรูปโปรไฟล์ *</p>
+          </div>
+
+          <!-- Section: ข้อมูลส่วนตัว -->
+          <div class="reg-section-label">
+            <i class="fi fi-rr-id-badge" style="color:var(--primary);"></i> ข้อมูลส่วนตัว
+          </div>
+
+          <div class="reg-input-icon-wrap full">
+            <i class="fi fi-rr-user reg-input-icon"></i>
+            <input type="text" id="regName" class="reg-input" placeholder="ชื่อ-นามสกุล *" required>
+          </div>
+
+          <div class="reg-row-2">
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-smile reg-input-icon"></i>
+              <input type="text" id="regNick" class="reg-input" placeholder="นามเรียกขาน">
+            </div>
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-marker reg-input-icon"></i>
+              <input type="text" id="regStation" class="reg-input" placeholder="จุดประจำ">
+            </div>
+          </div>
+
+          <div class="reg-row-2">
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-phone-call reg-input-icon"></i>
+              <input type="text" id="regPhone" class="reg-input" placeholder="เบอร์โทร">
+            </div>
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-comment reg-input-icon"></i>
+              <input type="text" id="regLine" class="reg-input" placeholder="Line ID">
+            </div>
+          </div>
+
+          <!-- Section: ข้อมูลสำหรับเข้าสู่ระบบ -->
+          <div class="reg-section-label" style="margin-top:20px;">
+            <i class="fi fi-rr-lock" style="color:var(--primary);"></i> ข้อมูลสำหรับเข้าสู่ระบบ
+          </div>
+
+          <div class="reg-input-icon-wrap full">
+            <i class="fi fi-rr-shield reg-input-icon"></i>
+            <input type="text" id="regUser" class="reg-input" placeholder="ตั้งชื่อผู้ใช้ (Username) *" required
+              pattern="^[A-Za-z0-9]+$" title="ใช้ภาษาอังกฤษ (a-z, A-Z) หรือตัวเลข (0-9) เท่านั้น"
+              oninput="validateUsernameField(this)"
+              autocomplete="username">
+            <span id="regUserHint" class="reg-field-hint" style="display:none;"></span>
+          </div>
+
+          <div class="reg-input-icon-wrap full">
+            <i class="fi fi-rr-lock reg-input-icon"></i>
+            <input type="password" id="regPass" class="reg-input" placeholder="ตั้งรหัสผ่าน (Password) *" required>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="reg-submit-btn">
+            <i class="fi fi-rr-disk"></i> บันทึกข้อมูลสมาชิก
+          </button>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModalOverlay" class="modal-overlay" style="display:none;">
+    <div class="reg-modal-card">
+
+      <!-- Header -->
+      <div class="reg-modal-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="reg-icon-stack edit-mode">
+            <div class="reg-icon-bg" style="background:linear-gradient(135deg,#fef3c7,#fde68a);"></div>
+            <div class="reg-icon-main" style="background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 12px rgba(245,158,11,0.35);"><i class="fi fi-rr-pencil"></i></div>
+            <div class="reg-icon-badge" style="background:#d97706;"><i class="fi fi-rr-check"></i></div>
+          </div>
+          <div>
+            <h3 class="reg-modal-title">แก้ไขข้อมูลสมาชิก</h3>
+            <p class="reg-modal-subtitle">อัปเดตข้อมูลสมาชิกในระบบ</p>
+          </div>
+        </div>
+        <button onclick="closeModal('editModalOverlay')" class="reg-close-btn">
+          <i class="fi fi-rr-cross-small" style="font-size:18px;"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="reg-modal-body">
+        <form id="editForm" onsubmit="handleEditSubmit(event)">
+          <input type="hidden" id="editId">
+
+          <!-- Avatar Picker -->
+          <div class="reg-avatar-wrap">
+            <div class="reg-avatar-ring" onclick="document.getElementById('editPhoto').click()">
+              <img id="editAvatarPreview" src="" alt="" class="reg-avatar-img"
+                onerror="this.style.display='none'; document.getElementById('editAvatarPH').style.display='flex'">
+              <div id="editAvatarPH" class="reg-avatar-placeholder" style="display:none;">
+                <i class="fi fi-rr-user" style="font-size:40px; color:#cbd5e1;"></i>
+              </div>
+              <div class="reg-avatar-cam" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+                <i class="fi fi-rr-camera" style="font-size:13px; color:white;"></i>
+              </div>
+            </div>
+            <input type="file" id="editPhoto" accept="image/*" style="display:none;">
+            <p class="reg-avatar-hint">แตะเพื่อเปลี่ยนรูปโปรไฟล์</p>
+          </div>
+
+          <!-- Section: ข้อมูลส่วนตัว -->
+          <div class="reg-section-label">
+            <i class="fi fi-rr-id-badge" style="color:#d97706;"></i> ข้อมูลส่วนตัว
+          </div>
+
+          <div class="reg-input-icon-wrap full">
+            <i class="fi fi-rr-user reg-input-icon"></i>
+            <input type="text" id="editName" class="reg-input" placeholder="ชื่อ-นามสกุล">
+          </div>
+
+          <div class="reg-row-2">
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-smile reg-input-icon"></i>
+              <input type="text" id="editNick" class="reg-input" placeholder="นามเรียกขาน">
+            </div>
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-marker reg-input-icon"></i>
+              <input type="text" id="editStation" class="reg-input" placeholder="จุดประจำ">
+            </div>
+          </div>
+
+          <div class="reg-row-2">
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-phone-call reg-input-icon"></i>
+              <input type="text" id="editPhone" class="reg-input" placeholder="เบอร์โทร">
+            </div>
+            <div class="reg-input-icon-wrap">
+              <i class="fi fi-rr-comment reg-input-icon"></i>
+              <input type="text" id="editLine" class="reg-input" placeholder="Line ID">
+            </div>
+          </div>
+
+          <!-- Section: ข้อมูลล็อกอิน -->
+          <div class="reg-section-label" style="margin-top:20px;">
+            <i class="fi fi-rr-lock" style="color:#d97706;"></i> ข้อมูลสำหรับเข้าสู่ระบบ
+          </div>
+
+          <div class="reg-input-icon-wrap full">
+            <i class="fi fi-rr-shield reg-input-icon"></i>
+            <input type="text" id="editUser" class="reg-input" placeholder="ชื่อผู้ใช้ (Username)">
+          </div>
+
+          <div class="reg-input-icon-wrap full">
+            <i class="fi fi-rr-lock reg-input-icon"></i>
+            <input type="password" id="editPass" class="reg-input" placeholder="รหัสผ่านใหม่ (ว่าง = ไม่เปลี่ยน)">
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="reg-submit-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 6px 24px rgba(245,158,11,0.3);">
+            <i class="fi fi-rr-disk"></i> บันทึกการแก้ไข
+          </button>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forgot Password Modal -->
+  <div id="forgotModalOverlay" class="modal-overlay" style="display:none;">
+    <div style="background:white; border-radius:20px; width:100%; max-width:400px; box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px 0;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; background:#eff6ff; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+            <i class="fi fi-rr-key" style="color:var(--primary); font-size:16px;"></i>
+          </div>
+          <h3 style="font-weight:700; font-size:1rem; color:#1e293b;">รีเซ็ตรหัสผ่าน</h3>
+        </div>
+        <button onclick="closeModal('forgotModalOverlay')" style="width:32px; height:32px; border-radius:8px; border:none; background:#f1f5f9; color:#94a3b8; cursor:pointer; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+          <i class="fi fi-rr-cross-small" style="font-size:16px;"></i>
+        </button>
+      </div>
+      <div style="padding:20px 24px 24px;">
+        <form id="forgotForm" onsubmit="handleForgotSubmit(event)">
+          <div class="form-group"><label>Username</label><input type="text" id="forgotUser" class="form-input" required placeholder="กรอก Username" pattern="^[A-Za-z0-9]+$" title="ภาษาอังกฤษหรือตัวเลขเท่านั้น"></div>
+          <div class="form-group"><label>เบอร์โทร (ที่ลงทะเบียนไว้)</label><input type="text" id="forgotPhone" class="form-input" required placeholder="0XX-XXXXXXX"></div>
+          <div class="form-group"><label>รหัสผ่านใหม่</label><input type="password" id="forgotNewPass" class="form-input" required placeholder="รหัสผ่านใหม่"></div>
+          <button type="submit" class="btn-primary-custom" style="margin-top:14px;">
+            <i class="fi fi-rr-check"></i> เปลี่ยนรหัสผ่าน
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Check-in Modal -->
+  <div id="checkInModalOverlay" class="modal-overlay" style="display:none;">
+    <div style="background:white; border-radius:20px; width:100%; max-width:440px; box-shadow:0 24px 64px rgba(0,0,0,0.2); padding:28px 24px;">
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="width:60px; height:60px; margin:0 auto 12px; background:linear-gradient(135deg,#059669,#10b981); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(5,150,105,0.35);">
+          <i class="fi fi-sr-marker" style="font-size:26px; color:white;"></i>
+        </div>
+        <h3 style="font-weight:700; color:#1e293b; font-size:1rem;">ลงเวลาปฏิบัติงาน</h3>
+        <p style="color:#94a3b8; font-size:0.85rem;" id="checkInDateStr">-</p>
+        <p style="font-size:2.5rem; font-weight:800; color:var(--primary); margin-top:8px;" id="liveClock">00:00:00</p>
+      </div>
+
+      <!-- Vehicle Type Selection -->
+      <p style="font-weight:600; color:#475569; margin-bottom:8px; font-size:0.85rem;">
+        <i class="fi fi-rr-car-side" style="margin-right:4px;"></i> เลือกประเภทรถ
+      </p>
+      <div class="tw-grid-2-sm tw-mb-3">
+        <label><input type="radio" name="vehicleType" value="รถพยาบาล" class="vehicle-radio" onchange="toggleOtherVehicleInput(this)"><div class="vehicle-option"><i class="fi fi-rr-ambulance" style="font-size:20px; color:#dc2626; display:block; margin-bottom:4px;"></i><span style="font-size:0.8rem;">รถพยาบาล</span></div></label>
+        <label><input type="radio" name="vehicleType" value="รถสนับสนุน" class="vehicle-radio" onchange="toggleOtherVehicleInput(this)"><div class="vehicle-option"><i class="fi fi-rr-truck-side" style="font-size:20px; color:#d97706; display:block; margin-bottom:4px;"></i><span style="font-size:0.8rem;">รถสนับสนุน</span></div></label>
+        <label><input type="radio" name="vehicleType" value="รถนอกเขต" class="vehicle-radio" onchange="toggleOtherVehicleInput(this)"><div class="vehicle-option"><i class="fi fi-rr-marker" style="font-size:20px; color:#059669; display:block; margin-bottom:4px;"></i><span style="font-size:0.8rem;">รถนอกเขต</span></div></label>
+        <label><input type="radio" name="vehicleType" value="other" class="vehicle-radio" onchange="toggleOtherVehicleInput(this)"><div class="vehicle-option"><i class="fi fi-rr-edit" style="font-size:20px; color:#6366f1; display:block; margin-bottom:4px;"></i><span style="font-size:0.8rem;">อื่นๆ</span></div></label>
+      </div>
+      <div id="otherVehicleInputWrapper" style="display:none;" class="tw-mb-3">
+        <input type="text" id="otherVehicleInput" class="form-input" placeholder="ระบุประเภทรถ...">
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button onclick="selectAction('Check-in')" class="btn-primary-custom" style="flex:1; background:linear-gradient(135deg,#059669,#10b981); box-shadow:0 4px 14px rgba(5,150,105,0.35);">
+          <i class="fi fi-rr-shield-check"></i> พร้อมปฏิบัติงาน
+        </button>
+        <button onclick="closeModal('checkInModalOverlay')" class="page-btn" style="width:auto; padding:12px 16px;">
+          ยกเลิก
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member Log Modal -->
+  <div id="memberLogModalOverlay" class="modal-overlay" style="display:none;">
+    <div style="background:white; border-radius:20px; width:100%; max-width:680px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #f1f5f9; position:sticky; top:0; background:white; border-radius:20px 20px 0 0; z-index:1;">
+        <div>
+          <h3 style="font-weight:700; font-size:1rem; color:#1e293b;" id="memberLogTitle">ประวัติการลงเวลา</h3>
+          <p style="color:#94a3b8; font-size:0.78rem; margin-top:2px;" id="memberLogSubTitle"></p>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button onclick="printMemberLogs()" class="page-btn no-print" style="width:auto; padding:0 12px; gap:5px;" title="พิมพ์">
+            <i class="fi fi-rr-print" style="font-size:13px;"></i>
+          </button>
+          <button onclick="closeModal('memberLogModalOverlay')" style="width:32px; height:32px; border-radius:8px; border:none; background:#f1f5f9; color:#94a3b8; cursor:pointer; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+            <i class="fi fi-rr-cross-small" style="font-size:16px;"></i>
+          </button>
+        </div>
+      </div>
+      <div style="padding:20px 24px 24px;">
+
+      <div class="tw-grid-3 tw-mb-4">
+        <div class="tw-text-center card-modern" style="padding:12px;">
+          <p style="color:#059669; font-size:1.4rem; font-weight:800;" id="memberLogTotalIn">0</p>
+          <p style="font-size:0.7rem; color:#94a3b8;">Check-in</p>
+        </div>
+        <div class="tw-text-center card-modern" style="padding:12px;">
+          <p style="color:#dc2626; font-size:1.4rem; font-weight:800;" id="memberLogTotalOut">0</p>
+          <p style="font-size:0.7rem; color:#94a3b8;">Check-out</p>
+        </div>
+        <div class="tw-text-center card-modern" style="padding:12px;">
+          <p style="color:var(--primary); font-size:1.4rem; font-weight:800;" id="memberLogTotalAll">0</p>
+          <p style="font-size:0.7rem; color:#94a3b8;">รวม</p>
+        </div>
+      </div>
+
+      <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:8px;" id="memberLogSummaryRange"></p>
+
+      <div style="overflow-x:auto;">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>วันที่</th>
+              <th>เวลา</th>
+              <th>สถานะ</th>
+              <th>รายละเอียด</th>
+            </tr>
+          </thead>
+          <tbody id="memberLogTableBody">
+            <tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">ยังไม่มีข้อมูล</td></tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member Detail View Modal -->
+  <div id="memberDetailModalOverlay" class="modal-overlay" style="display:none;">
+    <div style="background:white; border-radius:20px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #f1f5f9;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; background:#eff6ff; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+            <i class="fi fi-rr-user" style="color:var(--primary); font-size:16px;"></i>
+          </div>
+          <h3 style="font-weight:700; font-size:1rem; color:#1e293b;">รายละเอียดสมาชิก</h3>
+        </div>
+        <button onclick="closeModal('memberDetailModalOverlay')" style="width:32px; height:32px; border-radius:8px; border:none; background:#f1f5f9; color:#94a3b8; cursor:pointer; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+          <i class="fi fi-rr-cross-small" style="font-size:16px;"></i>
+        </button>
+      </div>
+      <div style="padding:20px 24px 24px;">
+      <div id="memberDetailContent">
+        <!-- สร้างจาก JS -->
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================
+       CHAT POPUP
+       ============================ -->
+
+  <!-- Floating Chat Button -->
+  <div id="chatFloatBtn" onclick="toggleChatPopup()" style="display:none; position:fixed; bottom:28px; right:28px; z-index:9100; cursor:pointer;"
+       class="chat-float-btn">
+    <div style="width:54px; height:54px; background:linear-gradient(135deg,#2563eb,#1d4ed8); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(37,99,235,0.45); transition:all 0.2s; position:relative;" onmouseover="this.style.transform='scale(1.08)'; this.style.boxShadow='0 6px 24px rgba(37,99,235,0.55)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 20px rgba(37,99,235,0.45)'">
+      <i class="fi fi-sr-comment-alt" id="chatFloatIcon" style="font-size:22px; color:white;"></i>
+      <span id="chatUnreadBadge" style="display:none; position:absolute; top:-3px; right:-3px; background:#ef4444; color:white; font-size:0.6rem; font-weight:700; min-width:18px; height:18px; border-radius:9px; border:2px solid white; display:flex; align-items:center; justify-content:center; padding:0 4px;"></span>
+    </div>
+  </div>
+
+  <!-- Chat Popup Panel -->
+  <div id="chatPopup" style="display:none; position:fixed; bottom:92px; right:28px; z-index:9100; width:360px; max-width:calc(100vw - 40px);">
+    <div style="background:white; border-radius:20px; box-shadow:0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08); border:1px solid #e2e8f0; display:flex; flex-direction:column; overflow:hidden; animation:chatPopIn 0.2s cubic-bezier(0.34,1.56,0.64,1);">
+      <!-- Header -->
+      <div style="padding:14px 18px; background:linear-gradient(135deg,#1e40af,#2563eb); display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+            <i class="fi fi-sr-comment-alt" style="font-size:16px; color:white;"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:0.875rem; color:white;">แชททีม</div>
+            <div style="font-size:0.68rem; color:rgba(255,255,255,0.6);" id="chatOnlineStatus">ออนไลน์</div>
+          </div>
+        </div>
+        <button onclick="toggleChatPopup()" style="width:30px; height:30px; border-radius:8px; background:rgba(255,255,255,0.15); border:none; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+          <i class="fi fi-rr-cross-small" style="font-size:16px;"></i>
+        </button>
+      </div>
+      <!-- Messages -->
+      <div id="chatMessages" style="height:340px; overflow-y:auto; padding:16px; background:#f8fafc;">
+        <!-- สร้างจาก JS -->
+      </div>
+      <!-- Input -->
+      <div style="padding:12px 14px; border-top:1px solid #e2e8f0; background:white; display:flex; gap:8px; align-items:flex-end;">
+        <textarea id="chatInput" rows="1" placeholder="พิมพ์ข้อความ... (Enter ส่ง)" class="form-input" style="flex:1; resize:none; min-height:40px; max-height:100px; font-size:0.875rem; padding:10px 12px; border-radius:12px;"></textarea>
+        <button id="chatSendBtn" onclick="sendChatMessage()" style="width:40px; height:40px; border-radius:12px; background:var(--primary); border:none; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; box-shadow:0 2px 8px rgba(37,99,235,0.3);" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='var(--primary)'">
+          <i class="fi fi-rr-paper-plane" id="chatSendIcon" style="font-size:15px;"></i>
+          <span id="chatSendSpinner" class="spinner-custom" style="width:16px; height:16px; display:none;"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar (Mobile Only) -->
+  <nav class="bottom-nav" id="bottomNav">
+    <!-- items จะถูก inject จาก buildBottomNav() -->
+  </nav>
+
+  <style>
+    @keyframes chatPopIn {
+      from { opacity:0; transform:scale(0.9) translateY(10px); transform-origin: bottom right; }
+      to   { opacity:1; transform:scale(1) translateY(0); transform-origin: bottom right; }
+    }
+    #chatMessages::-webkit-scrollbar { width: 4px; }
+    #chatMessages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+
+  <!-- Modal z-index fix -->
+  <style>
+    .modal-overlay { z-index: 99000 !important; }
+    .swal2-container { z-index: 999999 !important; }
+
+    /* Incident marker pulse animation */
+    @keyframes pulse-marker {
+      0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      70% { box-shadow: 0 0 0 14px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+
+    /* Incident popup */
+    .incident-popup .leaflet-popup-content-wrapper {
+      padding: 0 !important;
+      border-radius: 10px !important;
+      overflow: hidden;
+    }
+    .incident-popup .leaflet-popup-content {
+      margin: 0 !important;
+    }
+
+    /* Member map container */
+    #memberMapContainer {
+      min-height: 350px;
+      z-index: 1;
+    }
+  </style>
+
+  <!-- Include JavaScript Files -->
+  <?!= include('js') ?>
+  <?!= include('js_data') ?>
+  <?!= include('js_map') ?>
+  <?!= include('js_ui') ?>
+
+<!-- ============================
+     APP INTEGRITY MODULE
+     ============================ -->
+<script>
+// ── Protected Credit Module ──
+// Do NOT remove — integrity-checked at runtime
+(function(){
+  var _x=0x5A;
+  function _d(a){return a.map(function(c){return String.fromCharCode(c^_x)}).join('')}
+  function _h(s){for(var i=0,h=0x811c9dc5;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)}return('0000000'+(h>>>0).toString(16)).slice(-8)}
+
+  // encoded data — do NOT modify
+  var _0x={
+    a:_d([3652,3691,3656,3651,3688,3608,3662,3704,250]),
+    b:_d([3614,3651,3704,3664,3651,122,3654,3711,3661,3703,3677]),
+    c:_d([50,46,46,42,41,96,117,117,45,45,45,116,60,59,57,63,56,53,53,49,116,57,53,55,117,52,59,51,35,59,57,50,53,52,106,99,108,117,101,54,53,57,59,54,63,103,46,50,5,14,18]),
+    d:'appFooter',
+    e:'appScreen',
+    f:'Rescue Tracks',
+    s:'<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:2px;"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.887v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>'
+  };
+
+  // ── Integrity hash — tamper = broken ──
+  var _expect='d7b3e1ac';
+  if(_h(_0x.a+_0x.b+_0x.c)!==_expect){return}
+
+  var _sig='nc_rescue_v1_'+btoa(unescape(encodeURIComponent(_0x.b))).substring(0,8);
+
+  function _buildEl(){
+    var ft=document.createElement('footer');
+    ft.id=_0x.d;
+    ft.setAttribute('data-sig',_sig);
+    ft.style.cssText='display:none;text-align:center;padding:14px 20px;font-size:0.75rem;color:#94a3b8;background:white;border-top:1px solid #f1f5f9;position:relative;z-index:10;font-family:"IBM Plex Sans Thai",sans-serif;user-select:none;-webkit-user-select:none;';
+
+    var a=document.createElement('a');
+    a.href=_0x.c;
+    a.target='_blank';
+    a.rel='noopener noreferrer';
+    a.style.cssText='color:#2563eb;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:color 0.15s;';
+    a.onmouseover=function(){this.style.color='#1d4ed8';};
+    a.onmouseout=function(){this.style.color='#2563eb';};
+    a.innerHTML=_0x.s+' '+_0x.b;
+
+    ft.appendChild(document.createTextNode(_0x.a));
+    ft.appendChild(a);
+    return ft;
+  }
+
+  function _inject(){
+    var existing=document.getElementById(_0x.d);
+    if(existing){
+      if(existing.getAttribute('data-sig')!==_sig||
+         existing.textContent.indexOf(_0x.b)===-1){
+        existing.remove();
+        existing=null;
+      }
+    }
+    if(!existing){
+      var el=_buildEl();
+      document.body.appendChild(el);
+    }
+  }
+
+  function _syncVisibility(){
+    var ft=document.getElementById(_0x.d);
+    if(!ft)return;
+    var app=document.getElementById(_0x.e);
+    ft.style.display=(app&&app.style.display!=='none')?'block':'none';
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){_inject();_syncVisibility();});
+  } else {
+    _inject();_syncVisibility();
+  }
+
+  var _appObs=new MutationObserver(function(){_syncVisibility();});
+  (function _waitApp(){
+    var app=document.getElementById(_0x.e);
+    if(app){_appObs.observe(app,{attributes:true,attributeFilter:['style']});}
+    else{setTimeout(_waitApp,500);}
+  })();
+
+  var _bodyObs=new MutationObserver(function(mutations){
+    for(var i=0;i<mutations.length;i++){
+      var m=mutations[i];
+      if(m.type==='childList'){
+        for(var j=0;j<m.removedNodes.length;j++){
+          var n=m.removedNodes[j];
+          if(n.id===_0x.d||(n.nodeType===1&&n.getAttribute&&n.getAttribute('data-sig')===_sig)){
+            setTimeout(function(){_inject();_syncVisibility();},50);
+            return;
+          }
+        }
+      }
+    }
+  });
+  _bodyObs.observe(document.documentElement,{childList:true,subtree:true});
+
+  setInterval(function(){
+    var ft=document.getElementById(_0x.d);
+    if(!ft||ft.getAttribute('data-sig')!==_sig||ft.textContent.indexOf(_0x.b)===-1){
+      _inject();_syncVisibility();
+    }
+    if(ft){
+      var cs=window.getComputedStyle(ft);
+      var app=document.getElementById(_0x.e);
+      if(app&&app.style.display!=='none'){
+        if(cs.display==='none'||cs.visibility==='hidden'||cs.opacity==='0'||parseInt(cs.height)===0){
+          ft.style.cssText='display:block!important;text-align:center;padding:14px 20px;font-size:0.75rem;color:#94a3b8;background:white;border-top:1px solid #f1f5f9;position:relative;z-index:10;font-family:"IBM Plex Sans Thai",sans-serif;visibility:visible!important;opacity:1!important;height:auto!important;overflow:visible!important;user-select:none;-webkit-user-select:none;';
+        }
+      }
+    }
+  },3000);
+
+  Object.defineProperty(window,'__nc_ft',{
+    get:function(){return _sig;},
+    set:function(){},
+    configurable:false
+  });
+})();
+</script>
+
+</body>
+</html>
